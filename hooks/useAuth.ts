@@ -9,6 +9,10 @@ export function useAuth() {
 
   useEffect(() => {
     if (!auth) {
+      // Fallback to a stable local user when Firebase auth is not configured.
+      // This enables one-time onboarding/profile stored in localStorage.
+      const localUser = { uid: "local" } as unknown as User;
+      setUser(localUser);
       setReady(true);
       return;
     }

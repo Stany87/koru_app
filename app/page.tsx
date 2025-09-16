@@ -224,6 +224,11 @@ export default function KoruApp() {
       <AuthSignup onComplete={() => {}} onSwitchToLogin={() => setAuthView("login")} />
     )
   }
+  // If Firebase is not enabled, skip showing login/signup screens entirely
+  // (useAuth will provide a stable local user and we rely on localStorage persistence)
+  if (!isFirebaseEnabled) {
+    // no-op; let the rest of the flow continue with "local" uid
+  }
   if (!onboardingDone) {
     if (!onboardingChecked) {
       return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
@@ -237,7 +242,18 @@ export default function KoruApp() {
     if (!profileChecked) {
       return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
     }
-    return <UserProfileSetup onComplete={async (profile) => { setUserProfile(profile); setProfileSetupDone(true); setShowAssessment(true); try { if (user) saveLocalProfile(user.uid, profile) } catch { /* ignore */ } try { if (user && isFirebaseEnabled && !dataPersistenceDisabled) { await ensureUserDocument(user.uid, profile as any); await saveProfile(user.uid, profile as any, true) } } catch { /* ignore */ } }} />
+    return <UserProfileSetup onComplete={async (profile) => {
+      setUserProfile(profile);
+      setProfileSetupDone(true);
+      setShowAssessment(true);
+      try { if (user) saveLocalProfile(user.uid, profile) } catch { /* ignore */ }
+      try {
+        if (user && isFirebaseEnabled && !dataPersistenceDisabled) {
+          await ensureUserDocument(user.uid, profile as any);
+          await saveProfile(user.uid, profile as any, true)
+        }
+      } catch { /* ignore */ }
+    }} />
   }
 
   const handleModeSelect = (modeId: string) => {
