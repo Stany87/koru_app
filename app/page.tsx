@@ -234,6 +234,7 @@ export default function KoruApp() {
       <AuthSignup onComplete={() => {}} onSwitchToLogin={() => setAuthView("login")} />
     )
   }
+<<<<<<< HEAD
 
   // If profile setup is not done, show UserProfileSetup
   if (!profileSetupDone) {
@@ -251,13 +252,6 @@ export default function KoruApp() {
     const saved = user ? loadOnboardingDone(user.uid) : false
     if (!saved) return <OnboardingFlow onComplete={async () => { if (user) saveOnboardingDone(user.uid); setOnboardingDone(true); try { if (user && isFirebaseEnabled && !dataPersistenceDisabled) { await setOnboardingDoneDb(user.uid) } } catch { /* ignore */ } }} />
     setOnboardingDone(true)
-  }
-
-  if (!profileSetupDone) {
-    if (!profileChecked) {
-      return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
-    }
-    return <UserProfileSetup onComplete={async (profile) => { setUserProfile(profile); setProfileSetupDone(true); setShowAssessment(true); try { if (user) saveLocalProfile(user.uid, profile) } catch { /* ignore */ } try { if (user && isFirebaseEnabled && !dataPersistenceDisabled) { await ensureUserDocument(user.uid, profile as any); await saveProfile(user.uid, profile as any, true) } } catch { /* ignore */ } }} />
   }
 
   const handleModeSelect = (modeId: string) => {
