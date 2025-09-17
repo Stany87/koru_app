@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,6 +32,13 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
     privacyAccepted: false,
     termsAccepted: false,
   })
+
+  useEffect(() => {
+    const storedProfile = localStorage.getItem("userProfile")
+    if (storedProfile) {
+      setProfile(JSON.parse(storedProfile))
+    }
+  }, [])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -67,6 +74,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
 
   const handleComplete = () => {
     if (profile.privacyAccepted && profile.termsAccepted) {
+      localStorage.setItem("userProfile", JSON.stringify(profile))
       onComplete(profile)
     }
   }

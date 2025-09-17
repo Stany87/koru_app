@@ -3,7 +3,9 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
-import StarryBackground from "@/components/starry-background"
+import dynamic from "next/dynamic"
+
+const StarryBackground = dynamic(() => import("@/components/starry-background"), { ssr: false })
 
 export const metadata: Metadata = {
   title: "Koru - Mental Wellness App",

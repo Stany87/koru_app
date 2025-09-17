@@ -156,6 +156,15 @@ export default function KoruApp() {
     const checkProfile = async () => {
       if (!user) return
       try {
+        // First, check localStorage for the user profile
+        const local = loadLocalProfile(user.uid)
+        if (local) {
+          setUserProfile(local)
+          setProfileSetupDone(true)
+          setProfileChecked(true)
+          return
+        }
+
         // Firestore path: users/{uid} with field 'profile'
         if (isFirebaseEnabled && !dataPersistenceDisabled && db) {
           const ref = doc(db, "users", user.uid)
@@ -169,13 +178,7 @@ export default function KoruApp() {
             return
           }
         }
-        // Fallback: localStorage per-user
-        const local = loadLocalProfile(user.uid)
-        if (local) {
-          setUserProfile(local)
-          setProfileSetupDone(true)
-          return
-        }
+        
         setProfileSetupDone(false)
       } catch {
         setProfileSetupDone(false)
@@ -191,6 +194,13 @@ export default function KoruApp() {
   useEffect(() => {
     const checkOnboarding = async () => {
       if (!user) return
+      // If profile setup is done, then onboarding is also considered done
+      if (profileSetupDone) {
+        setOnboardingDone(true)
+        setOnboardingChecked(true)
+        return
+      }
+
       try {
         if (isFirebaseEnabled && !dataPersistenceDisabled) {
           const settings = await getUserSettings(user.uid)
@@ -209,7 +219,7 @@ export default function KoruApp() {
       }
     }
     checkOnboarding()
-  }, [user])
+  }, [user, profileSetupDone])
 
   // Show branded loading screen first
   if (showSplash) {
@@ -224,6 +234,16 @@ export default function KoruApp() {
       <AuthSignup onComplete={() => {}} onSwitchToLogin={() => setAuthView("login")} />
     )
   }
+
+  // If profile setup is not done, show UserProfileSetup
+  if (!profileSetupDone) {
+    if (!profileChecked) {
+      return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
+    }
+    return <UserProfileSetup onComplete={async (profile) => { setUserProfile(profile); setProfileSetupDone(true); setShowAssessment(true); try { if (user) saveLocalProfile(user.uid, profile) } catch { /* ignore */ } try { if (user && isFirebaseEnabled && !dataPersistenceDisabled) { await ensureUserDocument(user.uid, profile as any); await saveProfile(user.uid, profile as any, true) } } catch { /* ignore */ } }} />
+  }
+
+  // If onboarding is not done (and profile setup is), show OnboardingFlow
   if (!onboardingDone) {
     if (!onboardingChecked) {
       return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
