@@ -1,21 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { 
-  TrendingUp, 
-  Calendar, 
-  Target, 
-  Heart, 
+import {
+  TrendingUp,
+  Calendar,
+  Target,
+  Heart,
   Activity,
   BookOpen,
   Clock,
   Award,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from "lucide-react"
 import { FernFrond } from "@/components/icons/fern-frond"
+import MoodAssessmentPopup from "@/components/mood-assessment-popup"
 
 interface DashboardData {
   journalStreak: number
@@ -62,6 +64,7 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
   })
 
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [showMoodAssessment, setShowMoodAssessment] = useState(false)
 
   useEffect(() => {
     // Load dashboard data from localStorage
@@ -69,6 +72,9 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
     if (savedData) {
       setDashboardData(JSON.parse(savedData))
     }
+
+    // Show mood assessment on initial load (simulating login)
+    setShowMoodAssessment(true)
 
     // Update time every minute
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -104,40 +110,97 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
   const moodTrend = dashboardData.moodTrend.length > 0 ? dashboardData.moodTrend : getMoodTrendData()
 
   const getMoodEmoji = (mood: number) => {
-    const emojis = ["😔", "😕", "😐", "🙂", "😊"]
-    return emojis[mood - 1] || "😐"
-  }
+    if (mood <= 1) return "😔"; // Red
+    if (mood === 2) return "😕"; // Orange
+    if (mood === 3) return "😐"; // Yellow
+    if (mood === 4) return "🙂"; // Blue
+    if (mood >= 5) return "😊"; // Green
+    return "😐"; // Default
+  };
 
   const getMoodColor = (mood: number) => {
-    const colors = ["text-red-400", "text-orange-400", "text-yellow-400", "text-blue-400", "text-green-400"]
-    return colors[mood - 1] || "text-gray-400"
-  }
+    if (mood <= 1) return "text-red-500"; // Red
+    if (mood === 2) return "text-orange-500"; // Orange
+    if (mood === 3) return "text-yellow-500"; // Yellow
+    if (mood === 4) return "text-blue-500"; // Blue
+    if (mood >= 5) return "text-green-500"; // Green
+    return "text-gray-400"; // Default
+  };
 
-  const updateHabitProgress = (habit: keyof typeof dashboardData.habitsProgress, value: number) => {
+  const handleMoodAssessmentComplete = (answers: string[]) => {
+    setShowMoodAssessment(false);
+    const moodScore = answers.reduce((score, answer, index) => {
+      const questionOptions = [
+        ["Great", "Good", "Okay", "Not so good", "Struggling"],
+        ["High energy", "Moderate", "Low", "Exhausted", "Drained"],
+        ["Very connected", "Somewhat connected", "Neutral", "Isolated", "Very alone"],
+      ];
+      const answerIndex = questionOptions[index].indexOf(answer);
+      return score + (4 - answerIndex);
+    }, 0);
+
+    // Map moodScore (0-12) to a 1-5 scale
+    let mappedMood = 3; // Default to neutral
+    if (moodScore >= 10) mappedMood = 5; // Very good
+    else if (moodScore >= 7) mappedMood = 4; // Good
+    else if (moodScore >= 4) mappedMood = 3; // Okay
+    else if (moodScore >= 1) mappedMood = 2; // Not so good
+    else mappedMood = 1; // Struggling
+
+    setDashboardData(prev => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayDateString = today.toISOString().split('T')[0];
+
+      const existingMoodIndex = prev.moodTrend.findIndex(day => day.date === todayDateString);
+      let newMoodTrend;
+
+      if (existingMoodIndex !== -1) {
+        // Update existing mood for today
+        newMoodTrend = prev.moodTrend.map((day, index) => 
+          day.date === todayDateString ? { ...day, mood: mappedMood } : day
+        );
+      } else {
+        // Add new mood for today, ensuring it's the first entry for the current day
+        const newDay = { date: todayDateString, mood: mappedMood };
+        newMoodTrend = [newDay, ...prev.moodTrend.slice(0, 6)]; // Keep only last 7 days
+      }
+
+      return { ...prev, moodTrend: newMoodTrend };
+    });
+  };
+
+  const handleMoodAssessmentClose = () => {
+    setShowMoodAssessment(false);
+  };
+
+  const updateHabitProgress = (habit: keyof DashboardData['habitsProgress'], value: number) => {
     setDashboardData(prev => ({
       ...prev,
       habitsProgress: {
         ...prev.habitsProgress,
-        [habit]: {
-          ...prev.habitsProgress[habit],
-          current: Math.max(0, Math.min(prev.habitsProgress[habit].target, value))
-        }
+        [habit]: { ...prev.habitsProgress[habit], current: Math.max(0, value) }
       }
-    }))
-  }
+    }));
+  };
 
-  const updateExerciseCount = (exercise: keyof typeof dashboardData.completedExercises) => {
+  const updateExerciseCount = (exercise: keyof DashboardData['completedExercises']) => {
     setDashboardData(prev => ({
       ...prev,
       completedExercises: {
         ...prev.completedExercises,
         [exercise]: prev.completedExercises[exercise] + 1
       }
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="space-y-6">
+      <MoodAssessmentPopup
+        open={showMoodAssessment}
+        onComplete={handleMoodAssessmentComplete}
+        onClose={handleMoodAssessmentClose}
+      />
       {/* Welcome Section */}
       <Card className="glass-strong p-6 bg-gradient-to-r from-primary/10 to-secondary/10">
         <div className="flex items-center justify-between">
@@ -361,7 +424,7 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="glass p-4 rounded-lg text-center">
             <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 flex items-center justify-center mb-2">
-              <FernFrond className="h-6 w-6 text-blue-500" />
+              <Heart className="h-6 w-6 text-blue-500" />
             </div>
             <h4 className="font-semibold">Breathing</h4>
             <p className="text-2xl font-bold text-primary mb-2">{dashboardData.completedExercises.breathing}</p>
@@ -413,18 +476,18 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
           <Button 
             variant="outline" 
             className="glass h-16 flex-col"
-            onClick={() => onNavigate('chat')}
-          >
-            <FernFrond className="h-6 w-6 mb-1" />
-            <span className="text-sm">Chat with AI</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            className="glass h-16 flex-col"
             onClick={() => onNavigate('zen')}
           >
             <Heart className="h-6 w-6 mb-1" />
             <span className="text-sm">Zen Zone</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="glass h-16 flex-col"
+            onClick={() => onNavigate('chat')}
+          >
+            <MessageSquare className="h-6 w-6 mb-1" />
+            <span className="text-sm">Chat with AI</span>
           </Button>
           <Button 
             variant="outline" 

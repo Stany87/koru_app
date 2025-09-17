@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Heart, X } from "lucide-react"
-import { FernFrond } from "@/components/icons/fern-frond"
+import Image from "next/image" // Import Image component
 
 interface MoodAssessment {
   question: string
@@ -133,7 +133,7 @@ export default function MoodAssessmentPopup({ open, onComplete, onClose }: MoodA
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-semibold flex items-center justify-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
-              <FernFrond className="h-5 w-5 text-white" />
+              <Image src="/koru_logo.png" alt="Koru Logo" width={20} height={20} />
             </div>
             Koru Check-in
           </DialogTitle>

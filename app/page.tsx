@@ -234,7 +234,6 @@ export default function KoruApp() {
       <AuthSignup onComplete={() => {}} onSwitchToLogin={() => setAuthView("login")} />
     )
   }
-<<<<<<< HEAD
 
   // If profile setup is not done, show UserProfileSetup
   if (!profileSetupDone) {
