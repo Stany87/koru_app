@@ -11,38 +11,48 @@ interface MoodMusicProps {
 }
 
 
-const musicTracks = [
+// Nature sound generators using Web Audio API
+interface Track {
+  title: string
+  description: string
+  poster: string
+  color: string
+  category: string
+  soundType: 'ocean' | 'rain' | 'forest' | 'white'
+}
+
+const musicTracks: Track[] = [
   {
-    title: "Birds Chirping & Sea Breeze",
-    file: "/music/Birds Chirping & Sea Breeze.mp3",
-    description: "Gentle birdsong mixed with ocean waves",
-    poster: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center",
-    color: "from-blue-400/20 to-cyan-400/20",
-    category: "Nature Sounds"
-  },
-  {
-    title: "Ocean Breeze",
-    file: "/music/Ocean Breeze.mp3", 
-    description: "Calming ocean waves and sea breeze",
+    title: "Ocean Waves",
+    description: "Gentle ocean waves for deep relaxation",
     poster: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=400&h=300&fit=crop&crop=center",
-    color: "from-cyan-400/20 to-blue-500/20",
-    category: "Ocean Sounds"
+    color: "from-blue-400/20 to-cyan-400/20",
+    category: "Ocean Sounds",
+    soundType: 'ocean'
   },
   {
-    title: "Rain with Birds Chirping",
-    file: "/music/Rain with Birds Chirping.mp3",
-    description: "Peaceful rain with morning bird songs",
+    title: "Gentle Rain",
+    description: "Peaceful rainfall for focus and sleep",
     poster: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=400&h=300&fit=crop&crop=center",
     color: "from-gray-400/20 to-blue-400/20", 
-    category: "Rain Sounds"
+    category: "Rain Sounds",
+    soundType: 'rain'
   },
   {
-    title: "A Rainy Day",
-    file: "/music/A Rainy Day.mp3",
-    description: "Relaxing rainfall for deep focus",
+    title: "Forest Breeze",
+    description: "Wind through trees with subtle nature sounds",
+    poster: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center",
+    color: "from-green-400/20 to-emerald-500/20",
+    category: "Nature Sounds",
+    soundType: 'forest'
+  },
+  {
+    title: "White Noise",
+    description: "Pure white noise for concentration",
     poster: "https://images.unsplash.com/photo-1433863448220-78aaa064ff47?w=400&h=300&fit=crop&crop=center",
     color: "from-slate-400/20 to-gray-500/20",
-    category: "Rain Sounds"
+    category: "Focus Sounds",
+    soundType: 'white'
   }
 ]
 
@@ -50,61 +60,142 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
   const [currentTrack, setCurrentTrack] = useState<number | null>(null)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [volume, setVolume] = useState<number>(0.7)
-  const [currentTime, setCurrentTime] = useState<number>(0)
-  const [duration, setDuration] = useState<number>(0)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const gainNodeRef = useRef<GainNode | null>(null)
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null)
+
+  // Initialize Web Audio API
+  const initAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      gainNodeRef.current = audioContextRef.current.createGain()
+      gainNodeRef.current.connect(audioContextRef.current.destination)
+      gainNodeRef.current.gain.value = volume
+    }
+  }
+
+  // Generate nature sounds using Web Audio API
+  const generateSound = (soundType: Track['soundType']) => {
+    if (!audioContextRef.current || !gainNodeRef.current) return
+
+    const audioContext = audioContextRef.current
+
+    switch (soundType) {
+      case 'ocean':
+        return generateOceanWaves(audioContext)
+      case 'rain':
+        return generateRain(audioContext)
+      case 'forest':
+        return generateForestWind(audioContext)
+      case 'white':
+        return generateWhiteNoise(audioContext)
+      default:
+        return generateWhiteNoise(audioContext)
+    }
+  }
+
+  // Ocean waves generator
+  const generateOceanWaves = (audioContext: AudioContext) => {
+    const bufferSize = audioContext.sampleRate * 2
+    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate)
+    const output = noiseBuffer.getChannelData(0)
+
+    for (let i = 0; i < bufferSize; i++) {
+      // Generate filtered noise for ocean-like sound
+      const wave1 = Math.sin(i * 0.01) * 0.3
+      const wave2 = Math.sin(i * 0.007) * 0.2
+      const noise = (Math.random() * 2 - 1) * 0.1
+      output[i] = wave1 + wave2 + noise
+    }
+
+    return noiseBuffer
+  }
+
+  // Rain generator
+  const generateRain = (audioContext: AudioContext) => {
+    const bufferSize = audioContext.sampleRate * 2
+    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate)
+    const output = noiseBuffer.getChannelData(0)
+
+    for (let i = 0; i < bufferSize; i++) {
+      // High frequency filtered noise for rain
+      output[i] = (Math.random() * 2 - 1) * 0.3
+    }
+
+    return noiseBuffer
+  }
+
+  // Forest wind generator
+  const generateForestWind = (audioContext: AudioContext) => {
+    const bufferSize = audioContext.sampleRate * 2
+    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate)
+    const output = noiseBuffer.getChannelData(0)
+
+    for (let i = 0; i < bufferSize; i++) {
+      // Low frequency wind-like sound
+      const wind = Math.sin(i * 0.001) * 0.2
+      const noise = (Math.random() * 2 - 1) * 0.05
+      output[i] = wind + noise
+    }
+
+    return noiseBuffer
+  }
+
+  // White noise generator
+  const generateWhiteNoise = (audioContext: AudioContext) => {
+    const bufferSize = audioContext.sampleRate * 2
+    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate)
+    const output = noiseBuffer.getChannelData(0)
+
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = (Math.random() * 2 - 1) * 0.3
+    }
+
+    return noiseBuffer
+  }
 
   const togglePlayPause = async (trackIndex: number) => {
     try {
-      console.log("Toggle play/pause for track:", trackIndex)
+      initAudioContext()
       
       if (isPlaying && currentTrack === trackIndex) {
-        // Pause current track
-        if (audioRef.current) {
-          audioRef.current.pause()
+        // Stop current track
+        if (sourceNodeRef.current) {
+          sourceNodeRef.current.stop()
+          sourceNodeRef.current = null
         }
         setIsPlaying(false)
       } else {
-        // Play new track or resume current
-        const track = musicTracks[trackIndex]
-        console.log("Playing track:", track)
-        
-        if (audioRef.current) {
-          // If switching tracks, reset time
-          if (currentTrack !== trackIndex) {
-            setCurrentTime(0)
-            setDuration(0)
-          }
+        // Stop previous track if playing
+        if (sourceNodeRef.current) {
+          sourceNodeRef.current.stop()
+        }
+
+        // Start new track
+        if (audioContextRef.current && gainNodeRef.current) {
+          const track = musicTracks[trackIndex]
+          const audioBuffer = generateSound(track.soundType)
           
-          console.log("Setting audio src to:", track.file)
-          audioRef.current.src = track.file
-          audioRef.current.volume = volume
-          
-          // Try to play immediately
-          try {
-            await audioRef.current.play()
+          if (audioBuffer) {
+            const source = audioContextRef.current.createBufferSource()
+            source.buffer = audioBuffer
+            source.loop = true
+            source.connect(gainNodeRef.current)
+            source.start(0)
+            
+            sourceNodeRef.current = source
             setCurrentTrack(trackIndex)
             setIsPlaying(true)
-            console.log("Playback started successfully")
-          } catch (playError) {
-            console.error("Play failed:", playError)
-            // If autoplay is blocked, try loading first
-            audioRef.current.load()
-            // Wait a bit and try again
-            setTimeout(async () => {
-              try {
-                await audioRef.current?.play()
-                setCurrentTrack(trackIndex)
-        setIsPlaying(true)
-                console.log("Playback started on retry")
-              } catch (retryError) {
-                console.error("Retry play failed:", retryError)
-                alert("Please click the play button to start audio playback")
+            
+            // Handle when the sound ends
+            source.onended = () => {
+              if (sourceNodeRef.current === source) {
+                setIsPlaying(false)
+                setCurrentTrack(null)
+                sourceNodeRef.current = null
               }
-            }, 100)
+            }
           }
-        } else {
-          console.error("Audio ref is null!")
         }
       }
     } catch (error) {
@@ -116,71 +207,28 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = Number.parseFloat(e.target.value)
     setVolume(newVolume)
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = newVolume
     }
   }
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = Number.parseFloat(e.target.value)
-    setCurrentTime(newTime)
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime
-    }
-  }
+  // Remove seek functionality since we're using generated loops
 
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return "0:00"
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
-
+  // Clean up audio resources
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.stop()
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
       }
     }
   }, [])
 
-  // Initialize audio on first user interaction
-  const initializeAudio = () => {
-    if (audioRef.current) {
-      // Create a silent audio buffer to initialize the audio context
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      if (audioContext.state === 'suspended') {
-        audioContext.resume()
-      }
-    }
-  }
 
   return (
     <div className="min-h-screen pb-24">
-      {/* Hidden audio element */}
-      <audio
-        ref={audioRef}
-        onTimeUpdate={() => {
-          if (audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime)
-          }
-        }}
-        onLoadedMetadata={() => {
-          if (audioRef.current) {
-            setDuration(audioRef.current.duration)
-          }
-        }}
-        onEnded={() => {
-          setIsPlaying(false)
-          setCurrentTrack(null)
-          setCurrentTime(0)
-        }}
-        onError={(e) => {
-          console.error("Audio error:", e)
-          setIsPlaying(false)
-          setCurrentTrack(null)
-        }}
-      />
       
       {/* Header */}
       <header className="glass border-b border-white/10 p-4">
@@ -251,10 +299,7 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
                         variant="ghost"
                         size="icon"
                         className="glass-strong w-10 h-10"
-                        onClick={() => {
-                          initializeAudio()
-                          togglePlayPause(index)
-                        }}
+                        onClick={() => togglePlayPause(index)}
                       >
                         {isPlaying && currentTrack === index ? (
                           <Pause className="h-5 w-5" />
@@ -310,12 +355,12 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
 
       </div>
 
-      {/* Fixed Bottom Music Bar - Spotify Style */}
+      {/* Fixed Bottom Music Bar - Simple Version */}
       {currentTrack !== null && (
         <div className="fixed bottom-0 left-0 right-0 z-50 glass-strong border-t border-white/10 p-4">
-          <div className="max-w-7xl mx-auto flex items-center gap-4">
-            {/* Left: Track Info, Controls & Progress Bar */}
-            <div className="flex-1 flex items-center gap-4">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            {/* Left: Track Info & Controls */}
+            <div className="flex items-center gap-4">
               {/* Track Poster */}
               <div className="w-12 h-12 glass-strong rounded-lg overflow-hidden flex-shrink-0">
                 <img 
@@ -326,12 +371,12 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
               </div>
               
               {/* Track Info */}
-              <div className="min-w-0 w-48">
+              <div className="min-w-0">
                 <h4 className="text-sm font-semibold text-white truncate">
                   {musicTracks[currentTrack].title}
                 </h4>
                 <p className="text-xs text-white/70 truncate">
-                  {musicTracks[currentTrack].category}
+                  {musicTracks[currentTrack].category} • Looping
                 </p>
               </div>
               
@@ -340,10 +385,7 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
                 variant="ghost"
                 size="icon"
                 className="glass-strong w-10 h-10 flex-shrink-0"
-                  onClick={() => {
-                  initializeAudio()
-                  togglePlayPause(currentTrack)
-                }}
+                onClick={() => togglePlayPause(currentTrack)}
               >
                 {isPlaying ? (
                   <Pause className="h-5 w-5" />
@@ -351,22 +393,7 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
                   <Play className="h-5 w-5" />
                 )}
               </Button>
-
-              {/* Progress Bar */}
-              <div className="flex-1 flex items-center gap-2">
-                <span className="text-xs text-white/70 w-8">{formatTime(currentTime)}</span>
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 0}
-                  step="1"
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
-                />
-                <span className="text-xs text-white/70 w-8">{formatTime(duration)}</span>
-                  </div>
-                </div>
+            </div>
 
             {/* Right: Volume Control */}
             <div className="flex items-center gap-2 w-32">
@@ -380,10 +407,11 @@ export default function MoodMusic({ onBack }: MoodMusicProps) {
                 onChange={handleVolumeChange}
                 className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
               />
+              <span className="text-xs text-white/70 w-8">{Math.round(volume * 100)}%</span>
             </div>
           </div>
         </div>
-        )}
+      )}
     </div>
   )
 }
