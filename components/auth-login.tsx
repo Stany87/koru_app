@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Mail, Lock } from "lucide-react"
-import { FernFrond } from "@/components/icons/fern-frond"
+import Image from "next/image"
 import { auth } from "@/lib/firebase"
 import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth"
 
@@ -63,7 +63,7 @@ export default function AuthLogin({ onSwitchToSignup }: AuthLoginProps) {
       <Card className="w-full max-w-md glass-strong rounded-2xl p-6">
         <div className="text-center mb-6">
           <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center mb-3">
-            <FernFrond className="h-7 w-7 text-white" />
+            <Image src="/koru_logo.png" alt="Koru Logo" width={28} height={28} />
           </div>
           <h2 className="text-2xl font-semibold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Koru</h2>
           <p className="text-sm text-muted-foreground mt-1">Welcome back</p>
