@@ -368,9 +368,9 @@ export default function KoruAppContent() {
       journalStreak: 0,
       moodTrend: [],
       habitsProgress: {
-        water: { current: 0, target: 8 },
-        exercise: { current: 0, target: 30 },
-        sleep: { current: 0, target: 8 }
+        water: { current: 0, target: 8, dailyGoal: 8 },
+        exercise: { current: 0, target: 30, dailyGoal: 30 },
+        sleep: { current: 0, target: 8, dailyGoal: 8 }
       },
       completedExercises: {
         breathing: 0,
@@ -380,6 +380,20 @@ export default function KoruAppContent() {
       weeklyGoals: {
         completed: 0,
         total: 7
+      },
+      dailyGoals: {
+        exerciseGoal: 3,
+        exerciseCompleted: 0,
+        date: new Date().toISOString().split('T')[0]
+      }
+    }
+    
+    // Ensure dailyGoals exists in loaded data
+    if (!dashboardData.dailyGoals) {
+      dashboardData.dailyGoals = {
+        exerciseGoal: 3,
+        exerciseCompleted: 0,
+        date: new Date().toISOString().split('T')[0]
       }
     }
 

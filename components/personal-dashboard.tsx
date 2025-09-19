@@ -127,6 +127,23 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
       const savedData = localStorage.getItem("koru-dashboard")
       if (savedData) {
         const data = JSON.parse(savedData)
+        
+        // Ensure dailyGoals exists with proper structure
+        if (!data.dailyGoals) {
+          data.dailyGoals = {
+            exerciseGoal: 3,
+            exerciseCompleted: 0,
+            date: new Date().toISOString().split('T')[0]
+          }
+        }
+        
+        // Ensure habitsProgress has dailyGoal properties
+        if (data.habitsProgress) {
+          if (!data.habitsProgress.water.dailyGoal) data.habitsProgress.water.dailyGoal = 8
+          if (!data.habitsProgress.exercise.dailyGoal) data.habitsProgress.exercise.dailyGoal = 30
+          if (!data.habitsProgress.sleep.dailyGoal) data.habitsProgress.sleep.dailyGoal = 8
+        }
+        
         // console.log(`📊 PersonalDashboard[${instanceId}]: Loaded dashboard data:`, data)
         setDashboardData(data)
       } else {
@@ -400,7 +417,7 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
           </h3>
           <p className="text-sm text-muted-foreground">Exercises Done</p>
           <p className="text-xs text-blue-500 mt-1">
-            Daily: {dashboardData.dailyGoals.exerciseCompleted}/{dashboardData.dailyGoals.exerciseGoal}
+            Daily: {dashboardData.dailyGoals?.exerciseCompleted || 0}/{dashboardData.dailyGoals?.exerciseGoal || 3}
           </p>
           <div className="flex gap-1 mt-2">
             <Button 
