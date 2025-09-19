@@ -150,6 +150,15 @@ const BreathingAnimation = React.forwardRef<HTMLDivElement, { isPlaying: boolean
 
 BreathingAnimation.displayName = "BreathingAnimation"
 
+interface ZenProgress {
+  breathingSessions: { exercise: string; completedAt: string; duration: number }[]
+  meditationSessions: { type: string; asana: string; completedAt: string; duration: number }[]
+  totalBreathingMinutes: number
+  totalMeditationMinutes: number
+  currentStreak: number
+  lastSessionDate: string
+}
+
 export default function ZenZone({ onBack }: ZenZoneProps) {
   const [activeExercise, setActiveExercise] = useState<number | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -164,6 +173,78 @@ export default function ZenZone({ onBack }: ZenZoneProps) {
   const [selectedAsanaImage, setSelectedAsanaImage] = useState<string | null>(null)
   const [selectedAsanaInstructions, setSelectedAsanaInstructions] = useState<string[] | null>(null)
   const [showGrowthPlans, setShowGrowthPlans] = useState(false)
+  const [zenProgress, setZenProgress] = useState<ZenProgress>({
+    breathingSessions: [],
+    meditationSessions: [],
+    totalBreathingMinutes: 0,
+    totalMeditationMinutes: 0,
+    currentStreak: 0,
+    lastSessionDate: ''
+  })
+
+  // Load zen progress from localStorage
+  useEffect(() => {
+    const savedProgress = localStorage.getItem('koru-zen-progress')
+    if (savedProgress) {
+      try {
+        setZenProgress(JSON.parse(savedProgress))
+      } catch (error) {
+        console.error('Failed to load zen progress:', error)
+      }
+    }
+  }, [])
+
+  // Save zen progress to localStorage
+  const saveZenProgress = (newProgress: ZenProgress) => {
+    localStorage.setItem('koru-zen-progress', JSON.stringify(newProgress))
+    setZenProgress(newProgress)
+  }
+
+  // Track completed breathing session
+  const trackBreathingSession = (exerciseIndex: number, durationSeconds: number) => {
+    const exerciseName = breathingExercises[exerciseIndex].name
+    const completedAt = new Date().toISOString()
+    const today = completedAt.split('T')[0]
+    
+    const newSession = {
+      exercise: exerciseName,
+      completedAt,
+      duration: durationSeconds
+    }
+    
+    const newProgress = {
+      ...zenProgress,
+      breathingSessions: [...zenProgress.breathingSessions, newSession],
+      totalBreathingMinutes: zenProgress.totalBreathingMinutes + Math.round(durationSeconds / 60),
+      currentStreak: zenProgress.lastSessionDate === today ? zenProgress.currentStreak : zenProgress.currentStreak + 1,
+      lastSessionDate: today
+    }
+    
+    saveZenProgress(newProgress)
+  }
+
+  // Track completed meditation session
+  const trackMeditationSession = (durationSeconds: number) => {
+    const completedAt = new Date().toISOString()
+    const today = completedAt.split('T')[0]
+    
+    const newSession = {
+      type: 'Mindful Breathing',
+      asana: selectedAsana || 'No posture',
+      completedAt,
+      duration: durationSeconds
+    }
+    
+    const newProgress = {
+      ...zenProgress,
+      meditationSessions: [...zenProgress.meditationSessions, newSession],
+      totalMeditationMinutes: zenProgress.totalMeditationMinutes + Math.round(durationSeconds / 60),
+      currentStreak: zenProgress.lastSessionDate === today ? zenProgress.currentStreak : zenProgress.currentStreak + 1,
+      lastSessionDate: today
+    }
+    
+    saveZenProgress(newProgress)
+  }
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -172,6 +253,11 @@ export default function ZenZone({ onBack }: ZenZoneProps) {
         setTimeLeft((time) => {
           if (time <= 1) {
             setIsPlaying(false)
+            // Track completed breathing session
+            if (activeExercise !== null) {
+              const originalDuration = breathingExercises[activeExercise].duration
+              trackBreathingSession(activeExercise, originalDuration)
+            }
             return 0
           }
           return time - 1
@@ -180,18 +266,27 @@ export default function ZenZone({ onBack }: ZenZoneProps) {
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [isPlaying, timeLeft])
+  }, [isPlaying, timeLeft, activeExercise])
 
   // Timer for guided meditation session
   useEffect(() => {
     let interval: NodeJS.Timeout
     if (isMeditationPlaying && meditationTimeLeft > 0 && activeMeditation !== null) {
       interval = setInterval(() => {
-        setMeditationTimeLeft((t) => (t > 0 ? t - 1 : 0))
+        setMeditationTimeLeft((t) => {
+          if (t <= 1) {
+            // Track completed meditation session
+            const program = guidedMeditationPrograms[activeMeditation!]
+            const originalDuration = program.totalSeconds || 300
+            trackMeditationSession(originalDuration)
+            return 0
+          }
+          return t - 1
+        })
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [isMeditationPlaying, meditationTimeLeft, activeMeditation])
+  }, [isMeditationPlaying, meditationTimeLeft, activeMeditation, selectedAsana])
 
   const startExercise = (index: number) => {
     setActiveExercise(index)
@@ -342,10 +437,35 @@ export default function ZenZone({ onBack }: ZenZoneProps) {
       </header>
 
       <div className="p-4 max-w-4xl mx-auto space-y-6 hide-scrollbar overflow-y-auto">
+        {/* Progress Stats */}
+        {(zenProgress.totalBreathingMinutes > 0 || zenProgress.totalMeditationMinutes > 0) && (
+          <Card className="glass-strong p-6">
+            <h3 className="text-xl font-semibold mb-4">Your Zen Progress</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center glass p-3 rounded-lg">
+                <div className="text-2xl font-bold text-primary">{zenProgress.totalBreathingMinutes}</div>
+                <div className="text-xs text-muted-foreground">Breathing Minutes</div>
+              </div>
+              <div className="text-center glass p-3 rounded-lg">
+                <div className="text-2xl font-bold text-secondary">{zenProgress.totalMeditationMinutes}</div>
+                <div className="text-xs text-muted-foreground">Meditation Minutes</div>
+              </div>
+              <div className="text-center glass p-3 rounded-lg">
+                <div className="text-2xl font-bold text-green-500">{zenProgress.breathingSessions.length}</div>
+                <div className="text-xs text-muted-foreground">Breathing Sessions</div>
+              </div>
+              <div className="text-center glass p-3 rounded-lg">
+                <div className="text-2xl font-bold text-purple-500">{zenProgress.meditationSessions.length}</div>
+                <div className="text-xs text-muted-foreground">Meditation Sessions</div>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Daily Affirmation */}
         <Card className="glass-strong p-6 text-center bg-gradient-to-r from-primary/10 to-secondary/10">
           <h3 className="text-xl font-semibold mb-4">Daily Affirmation</h3>
-          <p className="text-lg leading-relaxed mb-4">"{affirmations[currentAffirmation]}"</p>
+          <p className="text-lg leading-relaxed mb-4">\"{affirmations[currentAffirmation]}\"</p>
           <Button variant="outline" className="glass border-primary/50 bg-transparent" onClick={nextAffirmation}>
             New Affirmation
           </Button>

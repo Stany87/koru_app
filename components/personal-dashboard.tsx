@@ -38,8 +38,8 @@ interface DashboardData {
     total: number
   }
   dailyGoals: {
-    exerciseGoal: number
-    exerciseCompleted: number
+    exerciseGoal: number // Now represents total growth tasks for the day
+    exerciseCompleted: number // Now represents completed growth tasks
     date: string
   }
 }
@@ -59,40 +59,62 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
   
   console.log(`🏠 PersonalDashboard instance ${instanceId} initialized`)
 
-  // Check and reset weekly goals if needed (every Monday)
+  // Check and reset daily progress every day at midnight
   useEffect(() => {
-    const checkWeeklyReset = () => {
-      const today = new Date()
-      const lastResetKey = 'koru-last-weekly-reset'
+    const checkDailyReset = () => {
+      const today = new Date().toISOString().split('T')[0] // Get YYYY-MM-DD format
+      const lastResetKey = 'koru-last-daily-reset'
       const lastReset = localStorage.getItem(lastResetKey)
       
+      // If no last reset recorded, set today and return
       if (!lastReset) {
-        localStorage.setItem(lastResetKey, today.toISOString())
+        localStorage.setItem(lastResetKey, today)
         return
       }
       
-      const lastResetDate = new Date(lastReset)
-      const daysSinceReset = Math.floor((today.getTime() - lastResetDate.getTime()) / (1000 * 60 * 60 * 24))
-      
-      // Reset weekly goals every 7 days (approximately weekly)
-      if (daysSinceReset >= 7) {
-        console.log('🔄 Resetting weekly goals for new week')
+      // If it's a new day, reset all daily progress
+      if (lastReset !== today) {
+        console.log('🔄 Resetting daily progress for new day:', today)
         setDashboardData(prev => {
           const newData = {
             ...prev,
+            // Reset daily habit progress
+            habitsProgress: {
+              water: { current: 0, target: prev.habitsProgress.water.target, dailyGoal: prev.habitsProgress.water.dailyGoal },
+              exercise: { current: 0, target: prev.habitsProgress.exercise.target, dailyGoal: prev.habitsProgress.exercise.dailyGoal },
+              sleep: { current: 0, target: prev.habitsProgress.sleep.target, dailyGoal: prev.habitsProgress.sleep.dailyGoal }
+            },
+            // Reset exercise log
+            completedExercises: {
+              breathing: 0,
+              meditation: 0,
+              journal: 0
+            },
+            // Reset daily goals (will be updated when growth plans loads)
+            dailyGoals: {
+              exerciseGoal: 0, // Will be set by growth plans based on daily tasks
+              exerciseCompleted: 0,
+              date: today
+            },
+            // Reset weekly goals to daily goals (keep completed count but rename concept)
             weeklyGoals: {
-              ...prev.weeklyGoals,
-              completed: 0
+              completed: 0,
+              total: 1 // Change from weekly (7) to daily (1) target
             }
           }
           localStorage.setItem("koru-dashboard", JSON.stringify(newData))
           return newData
         })
-        localStorage.setItem(lastResetKey, today.toISOString())
+        localStorage.setItem(lastResetKey, today)
       }
     }
     
-    checkWeeklyReset()
+    checkDailyReset()
+    
+    // Set up interval to check for day change every minute
+    const checkInterval = setInterval(checkDailyReset, 60000) // Check every minute
+    
+    return () => clearInterval(checkInterval)
   }, [])
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     journalStreak: 0,
@@ -109,10 +131,10 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
     },
     weeklyGoals: {
       completed: 0,
-      total: 7
+      total: 1 // Changed from weekly (7) to daily (1) target
     },
     dailyGoals: {
-      exerciseGoal: 3,
+      exerciseGoal: 0, // Will be updated by growth plans
       exerciseCompleted: 0,
       date: new Date().toISOString().split('T')[0]
     }
@@ -123,17 +145,51 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
   useEffect(() => {
     // Load dashboard data from localStorage
     const loadDashboardData = () => {
-      // console.log(`📋 PersonalDashboard[${instanceId}]: Loading data from localStorage`)
+      const today = new Date().toISOString().split('T')[0]
       const savedData = localStorage.getItem("koru-dashboard")
+      
       if (savedData) {
         const data = JSON.parse(savedData)
         
-        // Ensure dailyGoals exists with proper structure
+        // Check if data is from previous day and reset if needed
+        if (!data.dailyGoals || data.dailyGoals.date !== today) {
+          console.log('🔄 Dashboard data is from previous day, resetting daily progress')
+          
+          // Reset daily progress while preserving mood data and structure
+          data.habitsProgress = {
+            water: { current: 0, target: data.habitsProgress?.water?.target || 8, dailyGoal: data.habitsProgress?.water?.dailyGoal || 8 },
+            exercise: { current: 0, target: data.habitsProgress?.exercise?.target || 30, dailyGoal: data.habitsProgress?.exercise?.dailyGoal || 30 },
+            sleep: { current: 0, target: data.habitsProgress?.sleep?.target || 8, dailyGoal: data.habitsProgress?.sleep?.dailyGoal || 8 }
+          }
+          
+          data.completedExercises = {
+            breathing: 0,
+            meditation: 0,
+            journal: 0
+          }
+          
+          data.dailyGoals = {
+            exerciseGoal: 0, // Will be set by growth plans
+            exerciseCompleted: 0,
+            date: today
+          }
+          
+          data.weeklyGoals = {
+            completed: 0,
+            total: 1 // Daily target instead of weekly
+          }
+          
+          // Save the reset data
+          localStorage.setItem("koru-dashboard", JSON.stringify(data))
+          localStorage.setItem('koru-last-daily-reset', today)
+        }
+        
+        // Ensure all required properties exist
         if (!data.dailyGoals) {
           data.dailyGoals = {
-            exerciseGoal: 3,
+            exerciseGoal: 0, // Will be updated by growth plans
             exerciseCompleted: 0,
-            date: new Date().toISOString().split('T')[0]
+            date: today
           }
         }
         
@@ -144,10 +200,15 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
           if (!data.habitsProgress.sleep.dailyGoal) data.habitsProgress.sleep.dailyGoal = 8
         }
         
-        // console.log(`📊 PersonalDashboard[${instanceId}]: Loaded dashboard data:`, data)
+        // Ensure weeklyGoals is set for daily targets
+        if (!data.weeklyGoals || data.weeklyGoals.total === 7) {
+          data.weeklyGoals = {
+            completed: data.weeklyGoals?.completed || 0,
+            total: 1 // Change to daily target
+          }
+        }
+        
         setDashboardData(data)
-      } else {
-        // console.log(`❌ PersonalDashboard[${instanceId}]: No saved data found`)
       }
     }
     
@@ -298,45 +359,16 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
 
   const updateExerciseCount = (exercise: keyof DashboardData['completedExercises']) => {
     setDashboardData(prev => {
-      const today = new Date().toISOString().split('T')[0]
-      let newDailyGoals = prev.dailyGoals
-      
-      // Reset daily goals if it's a new day
-      if (prev.dailyGoals.date !== today) {
-        newDailyGoals = {
-          exerciseGoal: 3,
-          exerciseCompleted: 0,
-          date: today
-        }
-      }
-      
-      // Increment daily exercise count
-      const newExerciseCompleted = newDailyGoals.exerciseCompleted + 1
-      let weeklyGoalsUpdate = prev.weeklyGoals
-      
-      // If daily exercise goal is reached, increment weekly goals
-      if (newExerciseCompleted === newDailyGoals.exerciseGoal && 
-          prev.weeklyGoals.completed < prev.weeklyGoals.total) {
-        weeklyGoalsUpdate = {
-          ...prev.weeklyGoals,
-          completed: prev.weeklyGoals.completed + 1
-        }
-      }
-      
       const newData = {
         ...prev,
         completedExercises: {
           ...prev.completedExercises,
           [exercise]: prev.completedExercises[exercise] + 1
-        },
-        dailyGoals: {
-          ...newDailyGoals,
-          exerciseCompleted: newExerciseCompleted
-        },
-        weeklyGoals: weeklyGoalsUpdate
+        }
       }
       
       // Manually save to localStorage for exercise updates only
+      // Note: Daily goals are now managed by Growth Plans, not by these exercise buttons
       localStorage.setItem("koru-dashboard", JSON.stringify(newData))
       return newData
     });
@@ -398,13 +430,13 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
             <Target className="h-6 w-6 text-blue-500" />
           </div>
           <h3 className="text-2xl font-bold text-primary">
-            {dashboardData.weeklyGoals.completed}/{dashboardData.weeklyGoals.total}
+            {dashboardData.dailyGoals?.exerciseCompleted || 0}/{dashboardData.dailyGoals?.exerciseGoal || 0}
           </h3>
-          <p className="text-sm text-muted-foreground">Weekly Goals</p>
-          {dashboardData.weeklyGoals.completed >= dashboardData.weeklyGoals.total ? (
-            <p className="text-xs text-green-500 mt-1 font-semibold">✓ All goals completed!</p>
+          <p className="text-sm text-muted-foreground">Daily Goals</p>
+          {(dashboardData.dailyGoals?.exerciseCompleted || 0) >= (dashboardData.dailyGoals?.exerciseGoal || 0) && (dashboardData.dailyGoals?.exerciseGoal || 0) > 0 ? (
+            <p className="text-xs text-green-500 mt-1 font-semibold">✓ All tasks completed!</p>
           ) : (
-            <p className="text-xs text-muted-foreground mt-1">Complete daily exercises</p>
+            <p className="text-xs text-muted-foreground mt-1">Complete growth tasks</p>
           )}
         </Card>
 
@@ -417,35 +449,35 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
           </h3>
           <p className="text-sm text-muted-foreground">Exercises Done</p>
           <p className="text-xs text-blue-500 mt-1">
-            Daily: {dashboardData.dailyGoals?.exerciseCompleted || 0}/{dashboardData.dailyGoals?.exerciseGoal || 3}
+            Growth Tasks: {dashboardData.dailyGoals?.exerciseCompleted || 0}/{dashboardData.dailyGoals?.exerciseGoal || 0}
           </p>
-          <div className="flex gap-1 mt-2">
+          <div className="flex gap-2 mt-3 justify-center">
             <Button 
               size="sm" 
               variant="outline" 
               onClick={() => updateExerciseCount('breathing')}
-              className="glass text-xs px-2 py-1 h-6 hover:bg-green-500/10"
+              className="glass px-3 py-2 h-10 hover:bg-green-500/10 hover:scale-110 transition-all duration-200 border-green-500/30 hover:border-green-500/50 group"
               title="Breathing Exercise"
             >
-              🫁
+              <span className="text-xl group-hover:animate-pulse">🫁</span>
             </Button>
             <Button 
               size="sm" 
               variant="outline" 
               onClick={() => updateExerciseCount('meditation')}
-              className="glass text-xs px-2 py-1 h-6 hover:bg-green-500/10"
+              className="glass px-3 py-2 h-10 hover:bg-purple-500/10 hover:scale-110 transition-all duration-200 border-purple-500/30 hover:border-purple-500/50 group"
               title="Meditation"
             >
-              🧘
+              <span className="text-xl group-hover:animate-pulse">🧘</span>
             </Button>
             <Button 
               size="sm" 
               variant="outline" 
               onClick={() => updateExerciseCount('journal')}
-              className="glass text-xs px-2 py-1 h-6 hover:bg-green-500/10"
+              className="glass px-3 py-2 h-10 hover:bg-blue-500/10 hover:scale-110 transition-all duration-200 border-blue-500/30 hover:border-blue-500/50 group"
               title="Journaling"
             >
-              📝
+              <span className="text-xl group-hover:animate-pulse">📝</span>
             </Button>
           </div>
         </Card>
@@ -668,8 +700,9 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="glass p-4 rounded-lg text-center">
-            <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 flex items-center justify-center mb-2">
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 flex items-center justify-center mb-3 relative">
               <Heart className="h-6 w-6 text-blue-500" />
+              <span className="absolute text-2xl">🫁</span>
             </div>
             <h4 className="font-semibold">Breathing</h4>
             <p className="text-2xl font-bold text-primary mb-2">{dashboardData.completedExercises.breathing}</p>
@@ -683,8 +716,9 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
           </div>
 
           <div className="glass p-4 rounded-lg text-center">
-            <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-2">
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-3 relative">
               <Clock className="h-6 w-6 text-purple-500" />
+              <span className="absolute text-2xl">🧘</span>
             </div>
             <h4 className="font-semibold">Meditation</h4>
             <p className="text-2xl font-bold text-primary mb-2">{dashboardData.completedExercises.meditation}</p>
@@ -698,8 +732,9 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
           </div>
 
           <div className="glass p-4 rounded-lg text-center">
-            <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 flex items-center justify-center mb-2">
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 flex items-center justify-center mb-3 relative">
               <BookOpen className="h-6 w-6 text-green-500" />
+              <span className="absolute text-2xl">📝</span>
             </div>
             <h4 className="font-semibold">Journal</h4>
             <p className="text-2xl font-bold text-primary mb-2">{dashboardData.completedExercises.journal}</p>

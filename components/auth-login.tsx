@@ -47,14 +47,31 @@ export default function AuthLogin({ onSwitchToSignup }: AuthLoginProps) {
 
   const handleGoogle = async () => {
     if (!auth) {
-      setError("Auth not configured. Add Firebase env vars.")
+      setError("Firebase authentication not configured. Please set up Firebase environment variables or use demo mode.")
       return
     }
+    
+    setIsSubmitting(true)
     const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    })
+    
     try {
       await signInWithPopup(auth, provider)
     } catch (e: any) {
-      setError(e?.message || "Google sign-in failed")
+      console.error('Google sign-in error:', e)
+      if (e.code === 'auth/popup-closed-by-user') {
+        setError("Sign-in was cancelled. Please try again.")
+      } else if (e.code === 'auth/popup-blocked') {
+        setError("Popup was blocked by your browser. Please allow popups and try again.")
+      } else if (e.code === 'auth/cancelled-popup-request') {
+        setError("Another sign-in process is already in progress.")
+      } else {
+        setError(e?.message || "Google sign-in failed. Please try again.")
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -121,7 +138,8 @@ export default function AuthLogin({ onSwitchToSignup }: AuthLoginProps) {
         <button
           type="button"
           onClick={handleGoogle}
-          className="w-full flex items-center justify-center gap-2 bg-white text-black border border-white rounded-md py-2 hover:bg-white/90 transition-colors"
+          disabled={isSubmitting || !auth}
+          className="w-full flex items-center justify-center gap-2 bg-white text-black border border-white rounded-md py-2 hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="inline-flex items-center justify-center w-5 h-5">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -131,10 +149,43 @@ export default function AuthLogin({ onSwitchToSignup }: AuthLoginProps) {
           <span className="text-sm font-medium">Continue with Google</span>
         </button>
 
-        <p className="text-xs text-muted-foreground mt-4 text-center">
-          Don&apos;t have an account?{" "}
-          <button className="underline underline-offset-4 hover:text-foreground" onClick={onSwitchToSignup}>Create one</button>
-        </p>
+        <div className="mt-4 space-y-2">
+          <p className="text-xs text-muted-foreground text-center">
+            Don&apos;t have an account?{" "}
+            <button className="underline underline-offset-4 hover:text-foreground" onClick={onSwitchToSignup}>Create one</button>
+          </p>
+          
+          {/* Demo Mode Option */}
+          <div className="border-t border-white/10 pt-3">
+            <button
+              onClick={() => {
+                // Create a demo user profile and save to localStorage
+                const demoUser = {
+                  uid: 'demo-user',
+                  email: 'demo@koru.app',
+                  displayName: 'Demo User'
+                }
+                const demoProfile = {
+                  name: 'Demo User',
+                  age: 25,
+                  sex: 'prefer-not-to-say',
+                  pronouns: 'they/them',
+                  interests: ['wellness', 'mindfulness'],
+                  goals: ['reduce-stress', 'better-sleep'],
+                  mentalHealthHistory: 'no'
+                }
+                localStorage.setItem('koru-demo-user', JSON.stringify(demoUser))
+                localStorage.setItem('koru-profile-demo-user', JSON.stringify(demoProfile))
+                localStorage.setItem('koru-onboarding-done-demo-user', 'true')
+                // Reload the page to trigger authentication state change
+                window.location.reload()
+              }}
+              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Continue as Demo User (No account needed)
+            </button>
+          </div>
+        </div>
       </Card>
     </div>
   )
