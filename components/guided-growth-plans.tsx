@@ -1,22 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
-import { 
-  Calendar, 
-  CheckCircle, 
-  Circle, 
-  Lock, 
-  Star, 
+import {
   Target,
+  CheckCircle,
+  Calendar,
+  Lock,
   Clock,
   Award,
-  ArrowRight,
-  ArrowLeft
+  Star,
 } from "lucide-react"
+import EnhancedNavigation from "@/components/enhanced-navigation"
 
 interface Task {
   id: string
@@ -37,6 +35,7 @@ interface Week {
 
 interface GuidedGrowthPlansProps {
   onBack: () => void
+  onHome?: () => void
 }
 
 const initialWeeks: Week[] = [
@@ -262,7 +261,7 @@ const initialWeeks: Week[] = [
   }
 ]
 
-export default function GuidedGrowthPlans({ onBack }: GuidedGrowthPlansProps) {
+export default function GuidedGrowthPlans({ onBack, onHome }: GuidedGrowthPlansProps) {
   const [weeks, setWeeks] = useState<Week[]>(initialWeeks)
   const [currentWeek, setCurrentWeek] = useState<number>(1)
   const [activeDays, setActiveDays] = useState<string[]>([])
@@ -383,23 +382,19 @@ export default function GuidedGrowthPlans({ onBack }: GuidedGrowthPlansProps) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <div className="glass border-b border-white/10 p-4 mb-6">
-        <div className="flex items-center gap-4 max-w-4xl mx-auto">
-          <Button variant="ghost" size="icon" className="glass-strong" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full glass flex items-center justify-center">
-              <Target className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold">Guided Growth Plans</h1>
-              <p className="text-sm text-muted-foreground">Structured wellness journey</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Enhanced Header */}
+      <EnhancedNavigation
+        title="Guided Growth Plans"
+        subtitle="Structured wellness journey"
+        icon={Target}
+        iconColor="text-primary"
+        onBack={onBack}
+        showHomeButton={true}
+        onHome={onHome}
+        breadcrumbs={[
+          { label: "Wellness", icon: Star }
+        ]}
+      />
 
       <div className="p-4 max-w-4xl mx-auto space-y-6">
         {/* Overall Progress */}

@@ -17,7 +17,8 @@ import {
   MessageSquare
 } from "lucide-react"
 import { FernFrond } from "@/components/icons/fern-frond"
-import MoodAssessmentPopup from "@/components/mood-assessment-popup"
+import DebugMoodTest from "@/components/debug-mood-test"
+import MoodCheckinCard from "@/components/mood-checkin-card"
 
 interface DashboardData {
   journalStreak: number
@@ -41,9 +42,53 @@ interface DashboardData {
 interface PersonalDashboardProps {
   userName: string
   onNavigate: (mode: string) => void
+  userId?: string
+  showMoodCheckin?: boolean
+  onMoodCheckin?: () => void
+  onMoodCheckinDismiss?: () => void
 }
 
-export default function PersonalDashboard({ userName, onNavigate }: PersonalDashboardProps) {
+export default function PersonalDashboard({ userName, onNavigate, userId, showMoodCheckin, onMoodCheckin, onMoodCheckinDismiss }: PersonalDashboardProps) {
+  // Add instance tracking to prevent duplicate dashboard conflicts
+  const instanceId = useMemo(() => Math.random().toString(36).substr(2, 9), [])
+  
+  console.log(`🏠 PersonalDashboard instance ${instanceId} initialized`)
+
+  // Check and reset weekly goals if needed (every Monday)
+  useEffect(() => {
+    const checkWeeklyReset = () => {
+      const today = new Date()
+      const lastResetKey = 'koru-last-weekly-reset'
+      const lastReset = localStorage.getItem(lastResetKey)
+      
+      if (!lastReset) {
+        localStorage.setItem(lastResetKey, today.toISOString())
+        return
+      }
+      
+      const lastResetDate = new Date(lastReset)
+      const daysSinceReset = Math.floor((today.getTime() - lastResetDate.getTime()) / (1000 * 60 * 60 * 24))
+      
+      // Reset weekly goals every 7 days (approximately weekly)
+      if (daysSinceReset >= 7) {
+        console.log('🔄 Resetting weekly goals for new week')
+        setDashboardData(prev => {
+          const newData = {
+            ...prev,
+            weeklyGoals: {
+              ...prev.weeklyGoals,
+              completed: 0
+            }
+          }
+          localStorage.setItem("koru-dashboard", JSON.stringify(newData))
+          return newData
+        })
+        localStorage.setItem(lastResetKey, today.toISOString())
+      }
+    }
+    
+    checkWeeklyReset()
+  }, [])
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     journalStreak: 0,
     moodTrend: [],
@@ -64,27 +109,53 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
   })
 
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [showMoodAssessment, setShowMoodAssessment] = useState(false)
 
   useEffect(() => {
     // Load dashboard data from localStorage
-    const savedData = localStorage.getItem("koru-dashboard")
-    if (savedData) {
-      setDashboardData(JSON.parse(savedData))
+    const loadDashboardData = () => {
+      // console.log(`📋 PersonalDashboard[${instanceId}]: Loading data from localStorage`)
+      const savedData = localStorage.getItem("koru-dashboard")
+      if (savedData) {
+        const data = JSON.parse(savedData)
+        // console.log(`📊 PersonalDashboard[${instanceId}]: Loaded dashboard data:`, data)
+        setDashboardData(data)
+      } else {
+        // console.log(`❌ PersonalDashboard[${instanceId}]: No saved data found`)
+      }
     }
+    
+    loadDashboardData()
 
-    // Show mood assessment on initial load (simulating login)
-    setShowMoodAssessment(true)
+    // Listen for storage changes to refresh data when updated elsewhere
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "koru-dashboard" && e.newValue) {
+        setDashboardData(JSON.parse(e.newValue))
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also listen for custom events from the same tab
+    const handleCustomUpdate = () => {
+      // console.log(`📢 PersonalDashboard[${instanceId}]: Received koru-dashboard-updated event`)
+      loadDashboardData()
+    }
+    
+    window.addEventListener('koru-dashboard-updated', handleCustomUpdate)
 
     // Update time every minute
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
-    return () => clearInterval(timer)
+    
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('koru-dashboard-updated', handleCustomUpdate)
+    }
   }, [])
 
-  useEffect(() => {
-    // Save dashboard data to localStorage
-    localStorage.setItem("koru-dashboard", JSON.stringify(dashboardData))
-  }, [dashboardData])
+  // REMOVED: Automatic localStorage save to prevent overwriting mood data
+  // Dashboard data is now only saved when explicitly updated by user actions
+  // Mood data is saved by the main app after mood assessments
 
   const getGreeting = () => {
     const hour = currentTime.getHours()
@@ -94,22 +165,33 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
   }
 
   const getMoodTrendData = () => {
-    // Generate sample mood trend data for the last 7 days
+    // Get past 7 days starting from today (left) to 6 days ago (right)
     const days = []
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 0; i < 7; i++) {
       const date = new Date()
       date.setDate(date.getDate() - i)
+      // Use timezone-aware date formatting to match mood data storage
+      const dateString = date.getFullYear() + '-' + 
+        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(date.getDate()).padStart(2, '0')
+      
+      // Find existing mood data for this date
+      const existingMood = dashboardData.moodTrend.find(day => day.date === dateString)
+      
       days.push({
-        date: date.toISOString().split('T')[0],
-        mood: Math.floor(Math.random() * 5) + 1 // 1-5 mood scale
+        date: dateString,
+        mood: existingMood ? existingMood.mood : null, // null if no data logged
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        isToday: i === 0
       })
     }
     return days
   }
 
-  const moodTrend = dashboardData.moodTrend.length > 0 ? dashboardData.moodTrend : getMoodTrendData()
+  const moodTrend = getMoodTrendData()
 
-  const getMoodEmoji = (mood: number) => {
+  const getMoodEmoji = (mood: number | null) => {
+    if (mood === null) return "—"; // No data
     if (mood <= 1) return "😔"; // Red
     if (mood === 2) return "😕"; // Orange
     if (mood === 3) return "😐"; // Yellow
@@ -118,7 +200,8 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
     return "😐"; // Default
   };
 
-  const getMoodColor = (mood: number) => {
+  const getMoodColor = (mood: number | null) => {
+    if (mood === null) return "text-gray-400"; // No data
     if (mood <= 1) return "text-red-500"; // Red
     if (mood === 2) return "text-orange-500"; // Orange
     if (mood === 3) return "text-yellow-500"; // Yellow
@@ -127,80 +210,93 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
     return "text-gray-400"; // Default
   };
 
-  const handleMoodAssessmentComplete = (answers: string[]) => {
-    setShowMoodAssessment(false);
-    const moodScore = answers.reduce((score, answer, index) => {
-      const questionOptions = [
-        ["Great", "Good", "Okay", "Not so good", "Struggling"],
-        ["High energy", "Moderate", "Low", "Exhausted", "Drained"],
-        ["Very connected", "Somewhat connected", "Neutral", "Isolated", "Very alone"],
-      ];
-      const answerIndex = questionOptions[index].indexOf(answer);
-      return score + (4 - answerIndex);
-    }, 0);
+  const getMoodBarColor = (mood: number | null) => {
+    if (mood === null) return "bg-gray-300"; // No data
+    if (mood <= 1) return "bg-red-500"; // Very poor
+    if (mood === 2) return "bg-orange-500"; // Poor
+    if (mood === 3) return "bg-yellow-500"; // Okay
+    if (mood === 4) return "bg-blue-500"; // Good
+    if (mood >= 5) return "bg-green-500"; // Excellent
+    return "bg-gray-400"; // Default
+  };
 
-    // Map moodScore (0-12) to a 1-5 scale
-    let mappedMood = 3; // Default to neutral
-    if (moodScore >= 10) mappedMood = 5; // Very good
-    else if (moodScore >= 7) mappedMood = 4; // Good
-    else if (moodScore >= 4) mappedMood = 3; // Okay
-    else if (moodScore >= 1) mappedMood = 2; // Not so good
-    else mappedMood = 1; // Struggling
-
-    setDashboardData(prev => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayDateString = today.toISOString().split('T')[0];
-
-      const existingMoodIndex = prev.moodTrend.findIndex(day => day.date === todayDateString);
-      let newMoodTrend;
-
-      if (existingMoodIndex !== -1) {
-        // Update existing mood for today
-        newMoodTrend = prev.moodTrend.map((day, index) => 
-          day.date === todayDateString ? { ...day, mood: mappedMood } : day
-        );
+  // Calculate day streak based on consecutive days with mood entries
+  const calculateDayStreak = () => {
+    let streak = 0
+    // Create a copy to avoid mutating the original array
+    const sortedMoodData = [...dashboardData.moodTrend].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    
+    for (let i = 0; i < 30; i++) { // Check last 30 days
+      const checkDate = new Date()
+      checkDate.setDate(checkDate.getDate() - i)
+      const checkDateString = checkDate.getFullYear() + '-' + 
+        String(checkDate.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(checkDate.getDate()).padStart(2, '0')
+      
+      const hasEntry = sortedMoodData.some(entry => entry.date === checkDateString)
+      if (hasEntry) {
+        streak++
       } else {
-        // Add new mood for today, ensuring it's the first entry for the current day
-        const newDay = { date: todayDateString, mood: mappedMood };
-        newMoodTrend = [newDay, ...prev.moodTrend.slice(0, 6)]; // Keep only last 7 days
+        break // Streak broken
       }
+    }
+    return streak
+  }
 
-      return { ...prev, moodTrend: newMoodTrend };
+  const dayStreak = calculateDayStreak()
+  
+  // Debug logging for Today's Mood display (reduced for cleaner output)
+  if (moodTrend[0]?.mood) {
+    console.log(`🙂 PersonalDashboard[${instanceId}]: Today's mood found - ${getMoodEmoji(moodTrend[0].mood)} (${moodTrend[0].mood}/5)`)
+  } else {
+    console.log(`❓ PersonalDashboard[${instanceId}]: No mood data for today`)
+  }
+
+  // Mood assessment handlers removed - now handled in main app
+
+  const updateHabitProgress = (habit: keyof DashboardData['habitsProgress'], value: number) => {
+    setDashboardData(prev => {
+      const newData = {
+        ...prev,
+        habitsProgress: {
+          ...prev.habitsProgress,
+          [habit]: { ...prev.habitsProgress[habit], current: Math.max(0, value) }
+        }
+      }
+      // Manually save to localStorage for habit updates only
+      localStorage.setItem("koru-dashboard", JSON.stringify(newData))
+      return newData
     });
   };
 
-  const handleMoodAssessmentClose = () => {
-    setShowMoodAssessment(false);
-  };
-
-  const updateHabitProgress = (habit: keyof DashboardData['habitsProgress'], value: number) => {
-    setDashboardData(prev => ({
-      ...prev,
-      habitsProgress: {
-        ...prev.habitsProgress,
-        [habit]: { ...prev.habitsProgress[habit], current: Math.max(0, value) }
-      }
-    }));
-  };
-
   const updateExerciseCount = (exercise: keyof DashboardData['completedExercises']) => {
-    setDashboardData(prev => ({
-      ...prev,
-      completedExercises: {
-        ...prev.completedExercises,
-        [exercise]: prev.completedExercises[exercise] + 1
+    setDashboardData(prev => {
+      const newData = {
+        ...prev,
+        completedExercises: {
+          ...prev.completedExercises,
+          [exercise]: prev.completedExercises[exercise] + 1
+        }
       }
-    }));
+      // Manually save to localStorage for exercise updates only
+      localStorage.setItem("koru-dashboard", JSON.stringify(newData))
+      return newData
+    });
   };
 
   return (
     <div className="space-y-6">
-      <MoodAssessmentPopup
-        open={showMoodAssessment}
-        onComplete={handleMoodAssessmentComplete}
-        onClose={handleMoodAssessmentClose}
-      />
+      {/* Debug component temporarily hidden */}
+      {/* <DebugMoodTest userId={userId || null} /> */}
+      
+      {/* Mood Check-in Card */}
+      {showMoodCheckin && onMoodCheckin && onMoodCheckinDismiss && (
+        <MoodCheckinCard 
+          onMoodCheck={onMoodCheckin}
+          onDismiss={onMoodCheckinDismiss}
+        />
+      )}
+      {/* Mood assessment popup removed - now only triggered from profile or main app */}
       {/* Welcome Section */}
       <Card className="glass-strong p-6 bg-gradient-to-r from-primary/10 to-secondary/10">
         <div className="flex items-center justify-between">
@@ -235,11 +331,28 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
           <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-yellow-500/20 to-orange-500/20 flex items-center justify-center mb-2">
             <Award className="h-6 w-6 text-yellow-500" />
           </div>
-          <h3 className="text-2xl font-bold text-primary">{dashboardData.journalStreak}</h3>
+          <h3 className="text-2xl font-bold text-primary">{dayStreak}</h3>
           <p className="text-sm text-muted-foreground">Day Streak</p>
         </Card>
 
-        <Card className="glass p-4 text-center">
+        <Card 
+          className="glass p-4 text-center cursor-pointer hover:bg-blue-500/5 transition-colors" 
+          onClick={() => {
+            if (dashboardData.weeklyGoals.completed < dashboardData.weeklyGoals.total) {
+              setDashboardData(prev => {
+                const newData = {
+                  ...prev,
+                  weeklyGoals: {
+                    ...prev.weeklyGoals,
+                    completed: prev.weeklyGoals.completed + 1
+                  }
+                }
+                localStorage.setItem("koru-dashboard", JSON.stringify(newData))
+                return newData
+              })
+            }
+          }}
+        >
           <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 flex items-center justify-center mb-2">
             <Target className="h-6 w-6 text-blue-500" />
           </div>
@@ -247,6 +360,11 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
             {dashboardData.weeklyGoals.completed}/{dashboardData.weeklyGoals.total}
           </h3>
           <p className="text-sm text-muted-foreground">Weekly Goals</p>
+          {dashboardData.weeklyGoals.completed >= dashboardData.weeklyGoals.total ? (
+            <p className="text-xs text-green-500 mt-1 font-semibold">✓ All goals completed!</p>
+          ) : (
+            <p className="text-xs text-blue-500 mt-1">Click to complete goal</p>
+          )}
         </Card>
 
         <Card className="glass p-4 text-center">
@@ -257,6 +375,35 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
             {Object.values(dashboardData.completedExercises).reduce((a, b) => a + b, 0)}
           </h3>
           <p className="text-sm text-muted-foreground">Exercises Done</p>
+          <div className="flex gap-1 mt-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => updateExerciseCount('breathing')}
+              className="glass text-xs px-2 py-1 h-6 hover:bg-green-500/10"
+              title="Breathing Exercise"
+            >
+              🫁
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => updateExerciseCount('meditation')}
+              className="glass text-xs px-2 py-1 h-6 hover:bg-green-500/10"
+              title="Meditation"
+            >
+              🧘
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => updateExerciseCount('journal')}
+              className="glass text-xs px-2 py-1 h-6 hover:bg-green-500/10"
+              title="Journaling"
+            >
+              📝
+            </Button>
+          </div>
         </Card>
 
         <Card className="glass p-4 text-center">
@@ -264,7 +411,7 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
             <Heart className="h-6 w-6 text-purple-500" />
           </div>
           <h3 className="text-2xl font-bold text-primary">
-            {moodTrend.length > 0 ? getMoodEmoji(moodTrend[moodTrend.length - 1].mood) : "😐"}
+            {moodTrend.length > 0 ? getMoodEmoji(moodTrend[0].mood) : "😐"}
           </h3>
           <p className="text-sm text-muted-foreground">Today's Mood</p>
         </Card>
@@ -277,33 +424,87 @@ export default function PersonalDashboard({ userName, onNavigate }: PersonalDash
             <TrendingUp className="h-5 w-5 text-primary" />
             Mood Trends (7 Days)
           </h3>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="glass"
-            onClick={() => onNavigate('journal')}
-          >
-            <BookOpen className="h-4 w-4 mr-2" />
-            Add Entry
-          </Button>
         </div>
         
         <div className="space-y-4">
-          <div className="flex items-end justify-between h-32">
+          
+          {/* Analytical Health Bars */}
+          <div className="space-y-3">
             {moodTrend.map((day, index) => (
-              <div key={day.date} className="flex flex-col items-center space-y-2">
-                <div 
-                  className="w-8 bg-gradient-to-t from-primary/20 to-primary/60 rounded-t"
-                  style={{ height: `${(day.mood / 5) * 100}%` }}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                </span>
-                <span className={`text-lg ${getMoodColor(day.mood)}`}>
-                  {getMoodEmoji(day.mood)}
-                </span>
+              <div key={day.date} className="flex items-center gap-3">
+                {/* Day Label */}
+                <div className="flex items-center gap-2 w-20">
+                  <span className={`text-sm font-medium ${
+                    day.isToday ? "text-primary" : "text-muted-foreground"
+                  }`}>
+                    {day.isToday ? "Today" : day.dayName}
+                  </span>
+                </div>
+                
+                {/* Health Bar */}
+                <div className="flex-1 relative">
+                  <div className="w-full h-6 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        getMoodBarColor(day.mood)
+                      } ${day.mood === null ? "opacity-30" : "opacity-90"}`}
+                      style={{ 
+                        width: day.mood ? `${(day.mood / 5) * 100}%` : "100%"
+                      }}
+                    />
+                  </div>
+                  {/* Mood Score Label */}
+                  <div className="absolute right-2 top-0 h-6 flex items-center">
+                    <span className={`text-xs font-medium ${
+                      day.mood === null ? "text-gray-500" : "text-white"
+                    } drop-shadow-sm`}>
+                      {day.mood ? `${day.mood}/5` : "No data"}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Mood Emoji */}
+                <div className="w-8 text-center">
+                  <span className={`text-lg ${getMoodColor(day.mood)}`}>
+                    {getMoodEmoji(day.mood)}
+                  </span>
+                </div>
+                
+                {/* Date */}
+                <div className="w-20 text-right">
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(day.date).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                </div>
               </div>
             ))}
+          </div>
+          
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-4 border-t border-border">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span>Very Poor</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              <span>Poor</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span>Okay</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span>Good</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <span>Excellent</span>
+            </div>
           </div>
         </div>
       </Card>

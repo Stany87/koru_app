@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { User, Edit, Save, X, Camera, Bell, Shield, Palette, Heart } from "lucide-react"
+import { User, Edit, Save, X, Camera, Bell, Shield, Palette, Heart, RotateCcw } from "lucide-react"
+import { resetMoodAssessmentStatus } from "@/lib/mood-assessment"
 
 interface UserProfile {
   name: string
@@ -31,6 +32,7 @@ interface ProfileDialogProps {
   userProfile?: any // Accept any type to handle different profile structures
   onSave: (profile: UserProfile) => void
   onMoodCheck?: () => void
+  userId?: string // For mood assessment reset functionality
 }
 
 // Default profile structure
@@ -48,7 +50,7 @@ const defaultProfile: UserProfile = {
   }
 }
 
-export default function ProfileDialog({ open, onOpenChange, userProfile, onSave, onMoodCheck }: ProfileDialogProps) {
+export default function ProfileDialog({ open, onOpenChange, userProfile, onSave, onMoodCheck, userId }: ProfileDialogProps) {
   const [isEditing, setIsEditing] = useState(false)
   
   // Create a properly merged profile with defaults
@@ -314,13 +316,29 @@ export default function ProfileDialog({ open, onOpenChange, userProfile, onSave,
                 <p className="text-sm text-muted-foreground mb-4">
                   Take a moment to check in with yourself and track your current mood.
                 </p>
-                <Button 
-                  onClick={onMoodCheck} 
-                  className="w-full bg-gradient-to-r from-primary to-secondary"
-                >
-                  <Heart className="h-4 w-4 mr-2" />
-                  Start Mood Check-in
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    onClick={onMoodCheck} 
+                    className="w-full bg-gradient-to-r from-primary to-secondary"
+                  >
+                    <Heart className="h-4 w-4 mr-2" />
+                    Start Mood Check-in
+                  </Button>
+                  {userId && (
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        resetMoodAssessmentStatus(userId)
+                        alert('Mood assessment status reset! The initial mood check will appear again on next profile setup or login.')
+                      }}
+                      className="w-full glass text-xs"
+                    >
+                      <RotateCcw className="h-3 w-3 mr-2" />
+                      Reset Initial Assessment (Dev)
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}

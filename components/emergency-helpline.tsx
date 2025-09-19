@@ -2,10 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowLeft, Phone, MessageSquare, Globe, Clock, Heart, Users, Shield, ShieldAlert, Headphones } from "lucide-react"
+import { Phone, MessageSquare, Globe, Clock, Heart, Users, Shield, ShieldAlert, Headphones } from "lucide-react"
+import EnhancedNavigation from "@/components/enhanced-navigation"
 
 interface EmergencyHelplineProps {
   onBack: () => void
+  onHome?: () => void
 }
 
 const emergencyContacts = [
@@ -21,7 +23,7 @@ const emergencyContacts = [
   {
     name: "Kiran Mental Health Helpline",
     number: "14416",
-    description: "24/7 mental health support across India",
+    description: "24/7 mental health support across India (Hindi/English)",
     icon: Heart,
     color: "text-pink-400",
     urgent: true,
@@ -30,9 +32,18 @@ const emergencyContacts = [
   {
     name: "AASRA 24/7 Suicide Prevention",
     number: "+91 98204 66726",
-    description: "Confidential support, all India",
+    description: "Confidential suicide prevention support, all India",
     icon: Phone,
     color: "text-blue-400",
+    textOnly: false,
+  },
+  {
+    name: "Vandrevala Foundation",
+    number: "+91 99996 66555",
+    description: "24/7 crisis helpline and mental health support",
+    icon: Heart,
+    color: "text-purple-400",
+    urgent: true,
     textOnly: false,
   },
   {
@@ -43,35 +54,52 @@ const emergencyContacts = [
     color: "text-orange-400",
     textOnly: false,
   },
+  {
+    name: "Fortis Stress Helpline",
+    number: "+91 83760 04670",
+    description: "Mental health support and stress management",
+    icon: Headphones,
+    color: "text-green-400",
+    textOnly: false,
+  },
+  {
+    name: "Sahai (Bangalore)",
+    number: "+91 80 25497777",
+    description: "24/7 emotional support helpline",
+    icon: Heart,
+    color: "text-teal-400",
+    textOnly: false,
+  },
 ]
 
 const internationalResources = [
-  { country: "India", number: "14416", service: "Kiran Mental Health Helpline" },
-  { country: "India", number: "+91 98204 66726", service: "AASRA Suicide Prevention" },
-  { country: "India", number: "1098", service: "CHILDLINE" },
+  { country: "India - National", number: "14416", service: "Kiran Mental Health Helpline" },
+  { country: "India - Mumbai", number: "+91 98204 66726", service: "AASRA Suicide Prevention" },
+  { country: "India - Bangalore", number: "+91 80 25497777", service: "Sahai Emotional Support" },
+  { country: "India - Delhi", number: "+91 11 23389090", service: "Sumaitri Crisis Helpline" },
+  { country: "India - Chennai", number: "+91 44 24640050", service: "Sneha Suicide Prevention" },
+  { country: "India - Pune", number: "+91 20 25501287", service: "Connecting NGO" },
+  { country: "India - Kolkata", number: "+91 33 24637401", service: "Maithri Suicide Prevention" },
+  { country: "India - Children", number: "1098", service: "CHILDLINE India" },
   { country: "International", number: "befrienders.org", service: "Befrienders Worldwide" },
 ]
 
-export default function EmergencyHelpline({ onBack }: EmergencyHelplineProps) {
+export default function EmergencyHelpline({ onBack, onHome }: EmergencyHelplineProps) {
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="glass border-b border-white/10 p-4">
-        <div className="flex items-center gap-4 max-w-4xl mx-auto">
-          <Button variant="ghost" size="icon" className="glass-strong" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full glass flex items-center justify-center">
-              <Phone className="h-5 w-5 text-red-400" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold">Emergency Helpline</h1>
-              <p className="text-sm text-muted-foreground">24/7 professional support</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Enhanced Header */}
+      <EnhancedNavigation
+        title="Emergency Helpline"
+        subtitle="24/7 professional support available"
+        icon={Phone}
+        iconColor="text-red-400"
+        onBack={onBack}
+        showHomeButton={true}
+        onHome={onHome}
+        breadcrumbs={[
+          { label: "Crisis Support", icon: Shield }
+        ]}
+      />
 
       <div className="p-4 max-w-4xl mx-auto space-y-6">
         {/* Immediate Help Banner */}
@@ -137,11 +165,48 @@ export default function EmergencyHelpline({ onBack }: EmergencyHelplineProps) {
           })}
         </div>
 
-        {/* International Resources */}
+        {/* Online Mental Health Resources */}
         <Card className="glass-strong p-6">
           <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <Globe className="h-5 w-5 text-blue-400" />
-            International Resources
+            Online Mental Health Resources (India)
+          </h3>
+          <div className="space-y-3 mb-6">
+            <div className="p-4 glass rounded-lg">
+              <h4 className="font-semibold flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-green-400" />
+                YourDOST
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Online counseling platform with qualified psychologists (yourdost.com)
+              </p>
+            </div>
+            <div className="p-4 glass rounded-lg">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4 text-purple-400" />
+                BetterHelp India
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Professional online therapy and counseling services
+              </p>
+            </div>
+            <div className="p-4 glass rounded-lg">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Headphones className="h-4 w-4 text-blue-400" />
+                Manasthiti
+              </h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Mental health app with resources in multiple Indian languages
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Regional Helplines */}
+        <Card className="glass-strong p-6">
+          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Globe className="h-5 w-5 text-blue-400" />
+            Regional Helplines
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {internationalResources.map((resource, index) => (
@@ -211,7 +276,7 @@ export default function EmergencyHelpline({ onBack }: EmergencyHelplineProps) {
               { title: "5-4-3-2-1 Grounding", description: "Name 5 things you see, 4 you can touch, 3 you hear, 2 you smell, 1 you taste" },
               { title: "Box Breathing", description: "Breathe in for 4, hold for 4, out for 4, hold for 4. Repeat." },
               { title: "Safe Person", description: "Call or text someone you trust - a friend, family member, or counselor" },
-              { title: "Kiran Helpline (India)", description: "Call 14416 for 24/7 mental health support" },
+              { title: "Kiran Helpline (India)", description: "Call 14416 for 24/7 mental health support in Hindi/English" },
             ].map((strategy, index) => (
               <Card key={index} className="glass p-4">
                 <div className="flex items-start gap-3">
