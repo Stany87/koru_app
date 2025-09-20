@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Shield, Heart, HandHeart, MessageCircle, Sparkles, ArrowRight, ArrowLeft } from "lucide-react"
+import { Shield, Heart, HandHeart, MessageCircle, Sparkles, ArrowRight, ArrowLeft, AlertTriangle, Stethoscope } from "lucide-react"
 
 interface OnboardingFlowProps {
   onComplete: () => void
@@ -11,32 +11,32 @@ interface OnboardingFlowProps {
 
 const steps = [
   {
-    title: "Your conversations stay private",
+    title: "Your privacy is protected",
     description:
-      "What you share here stays between you and Koru. Your entries and chats are stored locally unless you choose otherwise.",
+      "What you share with Koru stays between you and the app. Your conversations, journal entries, and personal data are stored locally on your device and encrypted for your security.",
     icon: Shield,
-    color: "from-primary/10 to-secondary/10",
-  },
-  {
-    title: "No judgment zone",
-    description:
-      "This is a safe, compassionate space. We listen, validate, and support—never judge.",
-    icon: Heart,
-    color: "from-pink-500/10 to-purple-500/10",
-  },
-  {
-    title: "We're here to help",
-    description:
-      "Get coping strategies, calming tools, and resources. If you're in crisis, we'll guide you to immediate help.",
-    icon: HandHeart,
-    color: "from-green-500/10 to-teal-500/10",
-  },
-  {
-    title: "Meet your Koru AI companion",
-    description:
-      "Your personal AI assistant is trained in mental health support and available 24/7. It understands your feelings, provides coping strategies, and can detect when you need professional help.",
-    icon: MessageCircle,
     color: "from-blue-500/10 to-cyan-500/10",
+  },
+  {
+    title: "Not a replacement for professional help",
+    description:
+      "Koru provides support and coping strategies, but it's not a substitute for professional medical advice, diagnosis, or treatment. Always consult with qualified healthcare providers for serious concerns.",
+    icon: Stethoscope,
+    color: "from-orange-500/10 to-red-500/10",
+  },
+  {
+    title: "Crisis support available",
+    description:
+      "If you're experiencing a mental health emergency, Koru can immediately connect you with crisis hotlines and professional resources. Your safety is our priority.",
+    icon: AlertTriangle,
+    color: "from-red-500/10 to-pink-500/10",
+  },
+  {
+    title: "Your AI wellness companion",
+    description:
+      "Koru's AI provides 24/7 emotional support, mood tracking, guided activities, and personalized wellness plans. It's trained to understand mental health and provide helpful coping strategies.",
+    icon: MessageCircle,
+    color: "from-green-500/10 to-teal-500/10",
   },
 ]
 

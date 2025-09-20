@@ -206,12 +206,7 @@ export default function KoruAppContent() {
   useEffect(() => {
     const checkOnboarding = async () => {
       if (!user) return
-      // If profile setup is done, then onboarding is also considered done
-      if (profileSetupDone) {
-        setOnboardingDone(true)
-        setOnboardingChecked(true)
-        return
-      }
+      // Don't skip onboarding just because profile is done - onboarding should happen AFTER profile setup
 
       try {
         if (isFirebaseEnabled && !dataPersistenceDisabled) {
