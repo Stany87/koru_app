@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Shield, Heart, HandHeart, HelpCircle, Sparkles, ArrowRight, ArrowLeft } from "lucide-react"
+import { Shield, Heart, HandHeart, MessageCircle, Sparkles, ArrowRight, ArrowLeft } from "lucide-react"
 
 interface OnboardingFlowProps {
   onComplete: () => void
@@ -32,10 +32,10 @@ const steps = [
     color: "from-green-500/10 to-teal-500/10",
   },
   {
-    title: "How Koru works",
+    title: "Meet your Koru AI companion",
     description:
-      "Choose a mode that fits your moment: chat, zen, music, journal, or support resources—always at your pace.",
-    icon: HelpCircle,
+      "Your personal AI assistant is trained in mental health support and available 24/7. It understands your feelings, provides coping strategies, and can detect when you need professional help.",
+    icon: MessageCircle,
     color: "from-blue-500/10 to-cyan-500/10",
   },
 ]
