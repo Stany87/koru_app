@@ -23,15 +23,16 @@ import {
   Users,
   User,
 } from "lucide-react"
-// App logo image
-import EnhancedChatInterface from "@/components/enhanced-chat-interface"
-// Removed CrisisSupport
-import EmergencyHelpline from "@/components/emergency-helpline"
-import ZenZone from "@/components/zen-zone"
-import MoodMusic from "@/components/mood-music"
-import ReflectionJournal from "@/components/reflection-journal"
-import Lifestyle from "@/components/lifestyle"
-import CommunityMode from "@/components/community-mode"
+import dynamic from "next/dynamic"
+
+// Dynamic imports for heavy mode components (loaded only when needed) - no loading states
+const EnhancedChatInterface = dynamic(() => import("@/components/enhanced-chat-interface"))
+const EmergencyHelpline = dynamic(() => import("@/components/emergency-helpline"))
+const ZenZone = dynamic(() => import("@/components/zen-zone"))
+const MoodMusic = dynamic(() => import("@/components/mood-music"))
+const ReflectionJournal = dynamic(() => import("@/components/reflection-journal"))
+const Lifestyle = dynamic(() => import("@/components/lifestyle"))
+const CommunityMode = dynamic(() => import("@/components/community-mode"))
 import InstallButton from "@/components/install-button"
 import SettingsDialog from "@/components/settings-dialog"
 import ResourcesDialog from "@/components/resources-dialog"
@@ -45,12 +46,13 @@ import { loadLocalProfile, saveLocalProfile, loadOnboardingDone, saveOnboardingD
 import { doc, getDoc } from "firebase/firestore"
 import AuthSignup from "@/components/auth-signup"
 import AuthLogin from "@/components/auth-login"
-import OnboardingFlow from "@/components/onboarding-flow"
-import UserProfileSetup from "@/components/user-profile-setup"
-import PersonalDashboard from "@/components/personal-dashboard"
-import MoodAssessmentPopup from "@/components/mood-assessment-popup"
-import GuidedGrowthPlans from "@/components/guided-growth-plans"
-import ProfileDialog from "@/components/profile-dialog"
+// More dynamic imports for setup/flow components - no loading states
+const OnboardingFlow = dynamic(() => import("@/components/onboarding-flow"))
+const UserProfileSetup = dynamic(() => import("@/components/user-profile-setup"))
+const PersonalDashboard = dynamic(() => import("@/components/personal-dashboard"))
+const MoodAssessmentPopup = dynamic(() => import("@/components/mood-assessment-popup"))
+const GuidedGrowthPlans = dynamic(() => import("@/components/guided-growth-plans"))
+const ProfileDialog = dynamic(() => import("@/components/profile-dialog"))
 import { shouldShowDailyMoodCheck, markDailyMoodCheckCompleted, shouldShowVisitMoodCheck, markVisitMoodCheckCompleted } from "@/lib/mood-assessment"
 import MoodCheckinCard from "@/components/mood-checkin-card"
 import { AuthProvider } from "@/contexts/AuthContext"
@@ -249,14 +251,14 @@ export default function KoruAppContent() {
     }
   }, [user, onboardingDone, profileSetupDone, onboardingChecked, profileChecked])
 
-  // Show branded loading screen first
+  // Show branded loading screen first (reduced time for better UX)
   if (showSplash) {
-    return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
+    return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={600} />
   }
 
   // Gate on Firebase auth state - Allow anonymous access for team demo
   if (!ready) {
-    return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
+    return null // No loading screen, just wait
   }
   
   // If no user is logged in, create anonymous session for team access
@@ -271,7 +273,7 @@ export default function KoruAppContent() {
   // If profile setup is not done, show UserProfileSetup
   if (!profileSetupDone) {
     if (!profileChecked) {
-      return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
+      return null // No loading screen, just wait
     }
     return <UserProfileSetup onComplete={async (profile) => { 
       setUserProfile(profile); 
@@ -285,7 +287,7 @@ export default function KoruAppContent() {
   // If onboarding is not done (and profile setup is), show OnboardingFlow
   if (!onboardingDone) {
     if (!onboardingChecked) {
-      return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
+      return null // No loading screen, just wait
     }
     const saved = user ? loadOnboardingDone(user.uid) : false
     if (!saved) return <OnboardingFlow onComplete={async () => { if (user) saveOnboardingDone(user.uid); setOnboardingDone(true); try { if (user && isFirebaseEnabled && !dataPersistenceDisabled) { await setOnboardingDoneDb(user.uid) } } catch { /* ignore */ } }} />

@@ -19,7 +19,27 @@ import {
 import { FernFrond } from "@/components/icons/fern-frond"
 import DebugMoodTest from "@/components/debug-mood-test"
 import MoodCheckinCard from "@/components/mood-checkin-card"
-import { AchievementsMiniWidget } from "@/components/achievements/AchievementsMiniWidget"
+import dynamic from "next/dynamic"
+
+// Dynamically import heavy components for better performance
+const AchievementsMiniWidget = dynamic(
+  () => import("./achievements/AchievementsMiniWidget").then(mod => ({ default: mod.AchievementsMiniWidget })),
+  {
+    loading: () => (
+      <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-2xl p-4 animate-pulse">
+        <div className="flex items-center justify-between mb-3">
+          <div className="h-5 bg-white/20 rounded w-24"></div>
+          <div className="h-4 bg-white/20 rounded w-16"></div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-3 bg-white/20 rounded w-full"></div>
+          <div className="h-3 bg-white/20 rounded w-3/4"></div>
+        </div>
+      </div>
+    ),
+    ssr: false
+  }
+)
 import { useActivityTracker } from "@/contexts/AchievementContext"
 
 interface DashboardData {
