@@ -16,7 +16,7 @@ firebase-export.json
 # Local media (avoid uploading heavy duplicates)
 /musi/
 /music/
-/public/music/
+# /public/music/ - commented out to allow music files in repository
 
 # OS / editor
 .DS_Store
