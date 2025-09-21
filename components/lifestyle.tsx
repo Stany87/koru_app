@@ -3,11 +3,106 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Bed, Utensils, Activity, Sun, Shield, Droplets, Play, CheckCircle, Clock, Zap, Heart, Timer } from "lucide-react"
+import { ArrowLeft, Bed, Utensils, Activity, Sun, Shield, Droplets, Play, CheckCircle, Clock, Zap, Heart, Timer, ExternalLink, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface LifestyleProps {
   onBack: () => void
+}
+
+// Recipe Section Component
+function RecipeSection() {
+  const [recipes, setRecipes] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadRecipes = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const response = await fetch(`/api/recipes?date=${today}`)
+      if (!response.ok) throw new Error('Failed to load recipes')
+      const data = await response.json()
+      setRecipes(data.recipes || [])
+    } catch (err) {
+      setError('Could not load recipes. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadRecipes()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <RefreshCw className="h-8 w-8 mx-auto animate-spin text-orange-400 mb-4" />
+        <p className="text-muted-foreground">Loading delicious recipes...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={loadRecipes} variant="outline" className="glass">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Personalized healthy meal suggestions</p>
+        <Button onClick={loadRecipes} size="sm" variant="ghost" className="glass">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {recipes.map((recipe, idx) => (
+          <Card key={idx} className="glass p-4 hover:glass-strong transition-all">
+            <div className="space-y-3">
+              <div>
+                <h4 className="font-semibold text-lg mb-2">{recipe.title}</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">{recipe.desc}</p>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {recipe.tags?.map((tag: string, tagIdx: number) => (
+                  <span 
+                    key={tagIdx}
+                    className="px-2 py-1 text-xs rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              
+              {recipe.link && (
+                <Button 
+                  size="sm" 
+                  className="w-full bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500"
+                  onClick={() => window.open(recipe.link, '_blank')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Get Recipe
+                </Button>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export default function Lifestyle({ onBack }: LifestyleProps) {
@@ -913,6 +1008,21 @@ export default function Lifestyle({ onBack }: LifestyleProps) {
               </div>
             </div>
           </div>
+        </Card>
+
+        {/* Healthy Recipe Suggestions */}
+        <Card className="glass-strong p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-orange-500/20 to-yellow-500/20 flex items-center justify-center">
+              <Utensils className="h-6 w-6 text-orange-400" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-semibold">Today's Healthy Recipe Ideas</h3>
+              <p className="text-sm text-muted-foreground">Nutritious meals that support your mental wellness</p>
+            </div>
+          </div>
+          
+          <RecipeSection />
         </Card>
 
         {/* Wellness Tips */}
