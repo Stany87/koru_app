@@ -88,56 +88,56 @@ const modes = [
     title: "Zen Zone",
     description: "Find peace and calm your mind",
     icon: Sparkles,
-    color: "from-purple-500/20 to-blue-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)",
   },
   {
     id: "chat",
     title: "Chat Mode",
     description: "Talk with your AI companion",
     icon: MessageCircle,
-    color: "from-blue-500/20 to-cyan-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(34, 211, 238, 0.2) 100%)",
   },
   {
     id: "growth",
     title: "Growth Plans",
     description: "Structured wellness journey",
     icon: Target,
-    color: "from-indigo-500/20 to-purple-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)",
   },
   {
     id: "lifestyle",
     title: "Lifestyle",
     description: "Sleep, nutrition, and daily habits",
     icon: Heart,
-    color: "from-emerald-500/20 to-lime-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(132, 204, 22, 0.2) 100%)",
   },
   {
     id: "music",
     title: "Mood Music",
     description: "Curated playlists for your emotions",
     icon: Music,
-    color: "from-green-500/20 to-teal-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(20, 184, 166, 0.2) 100%)",
   },
   {
     id: "journal",
     title: "Reflection Journal",
     description: "Express your thoughts safely",
     icon: Book,
-    color: "from-yellow-500/20 to-orange-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%)",
   },
   {
     id: "community",
     title: "Community",
     description: "Connect with others on similar journeys",
     icon: Users,
-    color: "from-pink-500/20 to-rose-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(244, 63, 94, 0.2) 100%)",
   },
   {
     id: "emergency",
     title: "Crisis Support",
     description: "24/7 emergency helplines and resources",
     icon: Phone,
-    color: "from-red-500/20 to-orange-500/20",
+    bgGradient: "linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(249, 115, 22, 0.3) 100%)",
   },
 ]
 
@@ -591,9 +591,10 @@ export default function KoruAppContent() {
             return (
               <Card
                 key={mode.id}
-                className={`glass-strong rounded-xl p-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:glass border-2 border-transparent hover:border-primary/20 bg-gradient-to-br ${mode.color} group ${
+                className={`glass-strong rounded-xl p-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:glass border-2 border-transparent hover:border-primary/20 backdrop-blur-sm group ${
                   mode.id === "emergency" ? "ring-2 ring-red-500/30 hover:ring-red-500/50" : ""
                 }`}
+                style={{ background: mode.bgGradient }}
                 onClick={() => handleModeSelect(mode.id)}
               >
                 <div className="text-center space-y-2">
