@@ -53,6 +53,9 @@ import GuidedGrowthPlans from "@/components/guided-growth-plans"
 import ProfileDialog from "@/components/profile-dialog"
 import { shouldShowDailyMoodCheck, markDailyMoodCheckCompleted, shouldShowVisitMoodCheck, markVisitMoodCheckCompleted } from "@/lib/mood-assessment"
 import MoodCheckinCard from "@/components/mood-checkin-card"
+import { AuthProvider } from "@/contexts/AuthContext"
+import { AchievementProvider } from "@/contexts/AchievementContext"
+import { AchievementNotifications } from "@/components/achievements/AchievementNotification"
 
 interface MoodAssessment {
   question: string
@@ -251,8 +254,13 @@ export default function KoruAppContent() {
     return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
   }
 
-  // Gate on Firebase auth state
-  if (!ready || !user) {
+  // Gate on Firebase auth state - Allow anonymous access for team demo
+  if (!ready) {
+    return <SplashLoader onFinish={() => setShowSplash(false)} durationMs={800} />
+  }
+  
+  // If no user is logged in, create anonymous session for team access
+  if (!user) {
     return authView === "login" ? (
       <AuthLogin onSwitchToSignup={() => setAuthView("signup")} />
     ) : (
@@ -509,36 +517,43 @@ export default function KoruAppContent() {
           onClose={() => setShowAssessment(false)}
         />
         {/* Show dashboard behind the popup */}
-        <div className="min-h-screen">
-          <header className="glass border-b border-border p-4">
-            <div className="flex items-center justify-between max-w-4xl mx-auto">
-              <div className="flex items-center gap-2">
-                <div className="rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center overflow-hidden" style={{ width: '3rem', height: '3rem' }}>
-                  <img src="/koru_logo.png" alt="Koru logo" className="h-10 w-10 object-contain" />
+        <AuthProvider>
+          <AchievementProvider>
+          <div className="min-h-screen">
+            <header className="glass border-b border-border p-4">
+              <div className="flex items-center justify-between max-w-4xl mx-auto">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center overflow-hidden" style={{ width: '3rem', height: '3rem' }}>
+                    <img src="/koru_logo.png" alt="Koru logo" className="h-10 w-10 object-contain" />
+                  </div>
+                  <h1 className="text-2xl font-bold text-primary bg-gradient-to-r from-primary to-secondary bg-clip-text [background-clip:text] [-webkit-background-clip:text] [-webkit-text-fill-color:transparent] [&:not(:has(*))]:text-primary">
+                    Koru
+                  </h1>
                 </div>
-                <h1 className="text-2xl font-bold text-primary bg-gradient-to-r from-primary to-secondary bg-clip-text [background-clip:text] [-webkit-background-clip:text] [-webkit-text-fill-color:transparent] [&:not(:has(*))]:text-primary">
-                  Koru
-                </h1>
               </div>
-            </div>
-          </header>
-          <main className="p-4 max-w-4xl mx-auto">
-            <PersonalDashboard 
-              userName={userProfile?.name || "User"} 
-              onNavigate={handleModeSelect} 
-              userId={user?.uid}
-              showMoodCheckin={showMoodCheckin}
-              onMoodCheckin={handleMoodCheckin}
-              onMoodCheckinDismiss={handleMoodCheckinDismiss}
-            />
-          </main>
-        </div>
+            </header>
+            <main className="p-4 max-w-4xl mx-auto">
+              <PersonalDashboard 
+                userName={userProfile?.name || "User"} 
+                onNavigate={handleModeSelect} 
+                userId={user?.uid}
+                showMoodCheckin={showMoodCheckin}
+                onMoodCheckin={handleMoodCheckin}
+                onMoodCheckinDismiss={handleMoodCheckinDismiss}
+              />
+            </main>
+          </div>
+          </AchievementProvider>
+        </AuthProvider>
       </>
     )
   }
 
   return (
-    <div className="min-h-screen relative">
+    <AuthProvider>
+      <AchievementProvider>
+        <div className="min-h-screen relative">
+          <AchievementNotifications />
       {/* Header */}
       <header className="glass border-b border-border p-4">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
@@ -692,6 +707,8 @@ export default function KoruAppContent() {
         }}
         userId={user?.uid}
       />
-    </div>
+        </div>
+      </AchievementProvider>
+    </AuthProvider>
   )
 }

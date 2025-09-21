@@ -19,6 +19,8 @@ import {
 import { FernFrond } from "@/components/icons/fern-frond"
 import DebugMoodTest from "@/components/debug-mood-test"
 import MoodCheckinCard from "@/components/mood-checkin-card"
+import { AchievementsMiniWidget } from "@/components/achievements/AchievementsMiniWidget"
+import { useActivityTracker } from "@/contexts/AchievementContext"
 
 interface DashboardData {
   journalStreak: number
@@ -56,6 +58,7 @@ interface PersonalDashboardProps {
 export default function PersonalDashboard({ userName, onNavigate, userId, showMoodCheckin, onMoodCheckin, onMoodCheckinDismiss }: PersonalDashboardProps) {
   // Add instance tracking to prevent duplicate dashboard conflicts
   const instanceId = useMemo(() => Math.random().toString(36).substr(2, 9), [])
+  const { trackActivity } = useActivityTracker()
   
   console.log(`🏠 PersonalDashboard instance ${instanceId} initialized`)
 
@@ -357,7 +360,16 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
     });
   };
 
-  const updateExerciseCount = (exercise: keyof DashboardData['completedExercises']) => {
+  const updateExerciseCount = async (exercise: keyof DashboardData['completedExercises']) => {
+    // Track achievement first
+    if (exercise === 'breathing') {
+      await trackActivity('breathing_exercise')
+    } else if (exercise === 'meditation') {
+      await trackActivity('meditation')
+    } else if (exercise === 'journal') {
+      await trackActivity('journal_entry')
+    }
+
     setDashboardData(prev => {
       const newData = {
         ...prev,
@@ -416,14 +428,18 @@ export default function PersonalDashboard({ userName, onNavigate, userId, showMo
       </Card>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Today's Streak Counter */}
         <Card className="glass p-4 text-center flex flex-col items-center justify-center h-full">
           <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-yellow-500/20 to-orange-500/20 flex items-center justify-center mb-3">
             <Award className="h-6 w-6 text-yellow-500" />
           </div>
           <h3 className="text-3xl font-bold text-primary mb-1">{dayStreak}</h3>
-          <p className="text-sm text-muted-foreground">Day Streak</p>
+          <p className="text-sm text-muted-foreground">Today's Streak</p>
         </Card>
+        
+        {/* Achievements Panel */}
+        <AchievementsMiniWidget className="col-span-1 md:col-span-2 lg:col-span-1" />
 
         <Card className="glass p-4 text-center">
           <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 flex items-center justify-center mb-2">
